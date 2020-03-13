@@ -13,6 +13,7 @@ type Worker struct {
 	inQueue []ResultMsg
 	// outQueue    []*Message
 	masterResp string
+	partitions map[int][]Vertex
 	vertices []Vertex  // workers' own vertices
 	// allWorkers  map[int]map[int][]int // {workerID:  {partitionId: [vertexIDs]}}
 }
@@ -48,19 +49,6 @@ func handleMessage(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "%v: %v\n", name, h)
 		}
 	}
-
-	// for {
-	// 	select {
-	// 	case msg := <-w.masterInChan:
-	// 		switch {
-	// 		case msg == "Superstep":
-	// 			w.startSuperstep()
-	// 		case msg == "SaveState":
-	// 			//do something
-	// 		}
-	// 	}
-	// }
-
 }
 
 // loadVertices loads assigned vertices received from Master
@@ -84,21 +72,23 @@ func (w *Worker) startSuperstep() {
 	var wg sync.WaitGroup
 	for pID, vList := range partitions {
 		wg.Add(1)
-		defer wg.Done()
+		
 
-		go func() {
-			for v := range w.vertices {
-				// take udf and superstep from Master
-				go v.compute(udf, w, superstep)
-			}
-		}()
+		for pID, vList := range partitions {
+			go func(vList []Vertex, udf, superstep){
+				defer wg.Done()
+				for v := range vList {
+					ret = v.compute(udf, w, superstep)
+					w.inQueue = append(w.inQueue, ret)
+				}
+			}(vList, udf, superstep)
+		}
 
 	}
-	// wait until done
 	wg.Wait()
 
 	for pID, vList := range partitions {
-		go rcvFromVertex(pID) // fill inQueue, receive messages from vertices and add to inQueue
+		// go rcvFromVertex() 
 		go sendToWorkers(pID)    // fill outQueue, send outQueue
 	}
 
@@ -109,26 +99,28 @@ func (w *Worker) startSuperstep() {
 
 }
 
-// receive messages and halt votes after superstep
-func (w *Worker) rcvFromVertex(pID int) {
-	count := 0
+// receive messages and halt votes from vertices after superstep
+// func (w *Worker) rcvFromVertex() {
+// 	count := 0
+// 	for v := range w.inChan {
+// 		go func() {
+// 			for {
+// 				select {
+// 				case msg := <-v:
+// 					defer wg.Done()
+// 					w.inQueue = append(w.inQueue, msg)
 
-	for v := range w.inChan {
-		go func() {
-			for {
-				select {
-				case msg := <-v:
-					defer wg.Done()
-					w.inQueue = append(w.inQueue, msg)
+// 				// once worker receives all messages
+// 				case count == len(w.vertices):
+// 					return
+// 				}
+// 			}
+// 		}()
+// 	}
 
-				// once worker receives all messages
-				case count == len(w.vertices):
-					return
+// }
 
-				}
-			}
-		}()
-	}
+func (w *Worker) sendToWorkers() {
 
 }
 
