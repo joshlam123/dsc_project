@@ -3,8 +3,9 @@ package pregol
 import "fmt"
 
 type ResultMsg struct {
-	halt bool
-	msg  map[int]float64
+	sendId int
+	halt   bool
+	msg    map[int]float64
 }
 
 type Vertex struct {
@@ -24,7 +25,7 @@ func (v *Vertex) compute(udf UDF, owner Worker, superstep int) {
 	select {
 	case v.Edges = <-v.InMsg:
 		v.flag, v.outMsg = udf(v, superstep)
-		owner.inChan <- ResultMsg{false, v.outMsg}
+		owner.inChan <- ResultMsg{v.Id, false, v.outMsg}
 		//TODO: worker-side need channel to receive incoming messages for this super step : inChan []chan map[int]float64
 
 	default:
@@ -32,17 +33,15 @@ func (v *Vertex) compute(udf UDF, owner Worker, superstep int) {
 			v.VoteToHalt(owner)
 		} else {
 			v.flag, v.outMsg = udf(v, superstep)
-			owner.inChan <- ResultMsg{false, v.outMsg}
+			owner.inChan <- ResultMsg{v.Id, false, v.outMsg}
 		}
-
 	}
-
 }
 
 // TODO: Worker-side need a channel to receive votes to halt from each worker: halt []chan int
 func (v *Vertex) VoteToHalt(owner Worker) {
 	var m map[int]float64
-	owner.inChan <- ResultMsg{true, m}
+	owner.inChan <- ResultMsg{v.Id, true, m}
 }
 
 func main() {
