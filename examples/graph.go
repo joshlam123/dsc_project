@@ -12,11 +12,19 @@ import (
 
 // vertex of a graph which has id, value, outgoingEdges
 type Node struct {
-	Value         int
-	OutgoingEdges map[int]int
+	Name 		string
+	Value       int
 }
 
+type Vertice struct{
+	VerticeId int
+	Value 	  int
+}
 
+type Info struct {
+	Name string
+	NumVertices int
+}
 
 func check(e error) {
     if e != nil {
@@ -52,9 +60,8 @@ func main() {
 
 	maxNoNodes, _ := strconv.Atoi(os.Args[2])
 
-	nodeVals := make(map[int]int)
-    distinctPoints := make(map[int]Node)
-
+	nodeVals := make(map[int]Node)
+    // vertices 
     for node := 1; node <= maxNoNodes; node++ {
     	// generate the nodevalues first
     	rand.Seed(time.Now().UnixNano())
@@ -69,38 +76,45 @@ func main() {
     		minValSoFar = nodeVal
     	}
 
-    	nodeVals[node] = nodeVal
-
+    	nodeVals[node] = Node{Name:strconv.Itoa(node), Value:nodeVal}
     	}
 
-    for node := 1; node <= maxNoNodes; node++ {
 
-	    childMap := make(map[int]int)
+    totalEdgeMap := make(map[int][]Vertice)
+    // distinctPoints := make(map[string])
+    for node := 1; node <= maxNoNodes; node++ {
+    	// edges
+
 	// for each node, generate a random number of values and take the value from nodeVals
 		numNodes := rand.Intn(maxNoNodes)
 		for numNodes == 0 {
 			numNodes = rand.Intn(maxNoNodes)
 		}
-
 		fmt.Println("Number of nodes %d", numNodes)
+
+	// for each of the nodes 
 		for node2 := 1; node2 <= numNodes; node2++ {
 			rndNode := rand.Intn(maxNoNodes)
 			for rndNode == 0 {
 				rndNode = rand.Intn(maxNoNodes)
 			}
-
-			childMap[rndNode] = nodeVals[rndNode]
+			totalEdgeMap[rndNode] = append(totalEdgeMap[rndNode], Vertice{VerticeId:node2, Value:nodeVals[rndNode].Value})
 		}
-	    distinctPoints[node] = Node{Value:nodeVals[node], OutgoingEdges:childMap}
  	}
-    
+ 	
+    infoInt := Info{Name:aggregatorName, NumVertices:maxNoNodes}
+ 	// infoMap := map[string]interface{}{"info":interface{}{"name":aggregatorName, "numVertices":numNodes}}
+
+ 	generatedJson := map[string]interface{}{"info": infoInt, "edges":nodeVals, "vertices":totalEdgeMap}
+
+
  	d2 := map[string]int{"max_value":maxValSoFar, "min_value":minValSoFar}
 
-    fmt.Println(distinctPoints)
+    fmt.Println(generatedJson)
     fmt.Println("Max Value", maxValSoFar)
     fmt.Println("min Value", minValSoFar)
 
-    writeToJson(distinctPoints, os.Args[1], maxNoNodes)
+    writeToJson(generatedJson, os.Args[1], maxNoNodes)
 
     writeToJson(d2, "solutions", maxNoNodes)
 
