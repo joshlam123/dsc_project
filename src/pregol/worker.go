@@ -69,13 +69,13 @@ func (w *Worker) startSuperstep() {
 		
 
 		for pID, vList := range partitions {
-			go func(vList []Vertex, udf, superstep){
+			go func(){
 				defer wg.Done()
 				for v := range vList {
 					ret = v.compute(udf, w, superstep)
 					w.readMessage(ret)
 				}
-			}(vList, udf, superstep)
+			}()
 		}
 
 	}

@@ -1,8 +1,9 @@
 package main
 
 import (
-	"dsc_project/src/pregol"
 	"fmt"
+
+	"./src/pregol"
 )
 
 //set GOPATH=%GOPATH%;C:\Users\wooge\OneDrive\Desktop\dsc_project
