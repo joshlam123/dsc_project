@@ -1,6 +1,7 @@
 package pregol
 
 import (
+	"bytes"
 	"fmt"
 	"hash/fnv"
 	"io/ioutil"
@@ -13,30 +14,31 @@ import (
 
 // Master ...
 type Master struct {
-	NodeAdrss     []string
 	numPartitions int
 	ActiveNodes   []ActiveNode
+	graphsToNodes []graphReader
 }
 
 // NewMaster ...
-func NewMaster(ipFile string, numPartitions int) *Master {
+func NewMaster(numPartitions int) *Master {
 	m := Master{}
 	m.numPartitions = numPartitions
 	m.ActiveNodes = make([]ActiveNode, 0)
 
-	dat, err := ioutil.ReadFile(ipFile)
-	if err != nil {
-		panic(err)
-	}
-	m.NodeAdrss = strings.Split(string(dat), "\n")
 	return &m
 }
 
 // InitConnections ...
-func (m *Master) InitConnections() {
+func (m *Master) InitConnections(ipFile string) {
+	dat, err := ioutil.ReadFile(ipFile)
+	if err != nil {
+		panic(err)
+	}
+	nodeAdrss := strings.Split(string(dat), "\n")
+
 	var wg sync.WaitGroup
-	activeNodeChan := make(chan ActiveNode, len(m.NodeAdrss))
-	for i := range m.NodeAdrss {
+	activeNodeChan := make(chan ActiveNode, len(nodeAdrss))
+	for i := range nodeAdrss {
 		wg.Add(1)
 
 		go func(ip string, wg *sync.WaitGroup, activeNodeChan chan ActiveNode) {
@@ -64,7 +66,7 @@ func (m *Master) InitConnections() {
 				bodyString := string(bodyBytes)
 				fmt.Println(bodyString)
 			}
-		}(m.NodeAdrss[i], &wg, activeNodeChan)
+		}(nodeAdrss[i], &wg, activeNodeChan)
 
 	}
 	wg.Wait()
@@ -75,19 +77,65 @@ func (m *Master) InitConnections() {
 }
 
 // AssignPartitions Assign partitions to active nodes
-func (m *Master) AssignPartitions() {
+func (m *Master) AssignPartitions(graphFile string) {
+	g := getGraphFromFile(graphFile)
+	m.graphsToNodes = make([]graphReader, len(m.ActiveNodes))
+
 	for i := 0; i < m.numPartitions; i++ {
 		cNode := i % len(m.ActiveNodes)
 		m.ActiveNodes[cNode].partitionList = append(m.ActiveNodes[cNode].partitionList, i)
 	}
+
+	for k, v := range g.Vertices {
+		partitionIdx := getPartition(k, m.numPartitions)
+		cNode := partitionIdx % len(m.ActiveNodes)
+		m.graphsToNodes[cNode].Vertices[k] = v
+		m.graphsToNodes[cNode].Edges[k] = g.Edges[k]
+	}
+
+	for i := range m.graphsToNodes {
+		m.graphsToNodes[i].Info = g.Info
+		m.graphsToNodes[i].ActiveNodes = m.ActiveNodes
+	}
 }
 
+// DisseminateGraph ...
 func (m *Master) DisseminateGraph(graphFile string) {
-	g := getGraphFromFile(graphFile)
+	var wg sync.WaitGroup
+
 	for idx, aNode := range m.ActiveNodes {
-		go func() {
-			// Do something
-		}()
+		go func(ip string, wg *sync.WaitGroup, graphToSend graphReader) {
+			defer wg.Done()
+
+			var client = &http.Client{
+				Timeout: time.Second * 10,
+			}
+			req, err := http.NewRequest("POST", getURL(ip, "3000"), bytes.NewBuffer(getJSONByteFromGraph(graphToSend)))
+
+			if err != nil {
+				panic(err)
+			}
+
+			resp, err2 := client.Do(req)
+
+			if err2 != nil {
+				panic(err2)
+			}
+
+			defer resp.Body.Close()
+
+			if resp.StatusCode == http.StatusOK {
+				fmt.Println("Machine", ip, "received graph.")
+
+				bodyBytes, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					log.Fatal(err)
+				}
+				bodyString := string(bodyBytes)
+				fmt.Println(bodyString)
+			}
+		}(aNode.ip, &wg, m.graphsToNodes[idx])
+		wg.Wait()
 	}
 }
 

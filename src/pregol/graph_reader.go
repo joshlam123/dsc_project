@@ -57,3 +57,11 @@ func getGraphFromJSONByte(jsonBytes []byte) *graphReader {
 	fmt.Println(g)
 	return &g
 }
+
+func getJSONByteFromGraph(gR graphReader) []byte {
+	b, err := json.Marshal(gR)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
