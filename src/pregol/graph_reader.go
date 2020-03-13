@@ -2,7 +2,6 @@ package pregol
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -16,6 +15,7 @@ type infoReader struct {
 	Name          string
 	NumVertices   int
 	NumPartitions int
+	NodeID        int
 }
 
 type vertexReader struct {
@@ -29,10 +29,18 @@ type edgeReader struct {
 }
 
 type graphReader struct {
-	Info        infoReader
-	Vertices    map[int]vertexReader
-	Edges       map[int][]edgeReader
-	ActiveNodes []ActiveNode
+	Info            infoReader
+	Vertices        map[int]vertexReader
+	Edges           map[int][]edgeReader
+	ActiveNodes     []ActiveNode
+	PartitionToNode map[int]int
+}
+
+func newGraphReader() graphReader {
+	gR := graphReader{}
+	gR.Vertices = make(map[int]vertexReader)
+	gR.Edges = make(map[int][]edgeReader)
+	return gR
 }
 
 func getGraphFromFile(graphFile string) *graphReader {
@@ -47,14 +55,12 @@ func getGraphFromFile(graphFile string) *graphReader {
 	byteVal, _ := ioutil.ReadAll(jsonFile)
 	var g graphReader
 	json.Unmarshal(byteVal, &g)
-	fmt.Println(g)
 	return &g
 }
 
 func getGraphFromJSONByte(jsonBytes []byte) *graphReader {
 	var g graphReader
 	json.Unmarshal(jsonBytes, &g)
-	fmt.Println(g)
 	return &g
 }
 
