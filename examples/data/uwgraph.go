@@ -55,7 +55,6 @@ func main() {
 	var maxValSoFar int = 0
 	var minValSoFar int = 0
 	aggregatorName = os.Args[1]
-
 	fmt.Println(os.Args[2])
 
 	maxNoNodes, _ := strconv.Atoi(os.Args[2])
