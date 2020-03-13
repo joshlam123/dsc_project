@@ -19,6 +19,7 @@ type Node struct {
 type Vertice struct{
 	VerticeId int
 	Value 	  int
+	Weight 	  float64
 }
 
 type Info struct {
@@ -91,13 +92,18 @@ func main() {
 		}
 		fmt.Println("Number of nodes %d", numNodes)
 
+
 	// for each of the nodes 
 		for node2 := 1; node2 <= numNodes; node2++ {
+			rand.Seed(time.Now().UnixNano())
+
 			rndNode := rand.Intn(maxNoNodes)
 			for rndNode == 0 {
 				rndNode = rand.Intn(maxNoNodes)
 			}
-			totalEdgeMap[rndNode] = append(totalEdgeMap[rndNode], Vertice{VerticeId:node2, Value:nodeVals[rndNode].Value})
+			var weight float64 = rand.Float64() * float64(maxNoNodes)
+
+			totalEdgeMap[rndNode] = append(totalEdgeMap[rndNode], Vertice{VerticeId:node2, Value:nodeVals[rndNode].Value, Weight:weight})
 		}
  	}
  	
@@ -113,9 +119,9 @@ func main() {
     fmt.Println("Max Value", maxValSoFar)
     fmt.Println("min Value", minValSoFar)
 
-    writeToJson(generatedJson,  "solutions"+os.Args[1], maxNoNodes)
+    writeToJson(generatedJson, os.Args[1], maxNoNodes)
 
-    writeToJson(d2, "solutions", maxNoNodes)
+    writeToJson(d2, "solutions"+os.Args[1], maxNoNodes)
 
 
 }
