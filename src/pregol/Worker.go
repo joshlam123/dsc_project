@@ -1,16 +1,68 @@
 package pregol
 
-// Worker represent a node in the distributed system
-type Worker struct {
-	ID         int
-	allWorkers map[int]map[int][]int // {workerID:  {partitionId: [vertexIDs]}}
-	inQueue    []string              // ["msg1", "msg2"] current incoming messages
-	outQueue   []string              // next outgoing messages
-	currVertex Vertex                // current active vertex
-	nextVertex Vertex                // next active vertex
-	Vertices   []*Vertex             // workers' own vertices
+import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"sync"
+	"time"
+)
+
+type Response struct {
+	Status     string // e.g. "200 OK"
+	StatusCode int   
 }
 
+func jsonHandler(w http.ResponseWriter, r *http.Request) {     
+      
+	w.Header().Set("Content-Type", "application/json") 
+	resp := Response {
+				  Status: "200 OK", 
+				  StatusCode: 200
+			 } 
+
+	js, err := json.Marshal(resp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(js)
+	
+}
+
+// Worker ...
+type Worker struct {
+	ID          int
+	masterAdrss string
+	allWorkers  map[int]map[int][]int // {workerID:  {partitionId: [vertexIDs]}}
+	inQueue     []*Message            
+	outQueue    []*Message            
+	currVertex  Vertex                
+	nextVertex  Vertex                
+	vertices    []Vertex              // workers' own vertices
+}
+
+// InitWorkers ...
+func (w *Worker) InitWorkers() {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func(ip string, wg *sync.WaitGroup) {
+		defer wg.Done()
+
+		http.HandleFunc("/json", jsonHandler)
+		http.ListenAndServe(":3000", nil)
+
+	}(w.masterAdrss, &wg)
+
+	wg.Wait()
+	close(masterChan)
+	fmt.Print("Worker ", w.ID, "connected.")
+}
+
+// loadVertices loads assigned vertices received from Master
 func (w *Worker) loadVertices() {
 	// check whether assigned vertex is in assigned partition
 	partitionsMap := w.allWorkers[w.ID]
@@ -51,6 +103,14 @@ func (w *Worker) superstep(pID int) {
 		go v.compute()
 	}
 
+}
+
+func (w* Worker) receive(pID int) {
+	for v := range w.vertices {
+		go func() {
+			
+		}
+	}
 }
 
 func (w *Worker) sendActiveVertices() {
