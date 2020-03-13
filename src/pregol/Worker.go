@@ -2,46 +2,25 @@ package pregol
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"sync"
-	"time"
 )
-
-type Response struct {
-	Status     string // e.g. "200 OK"
-	StatusCode int   
-}
-
-func jsonHandler(w http.ResponseWriter, r *http.Request) {     
-      
-	w.Header().Set("Content-Type", "application/json") 
-	resp := Response {
-				  Status: "200 OK", 
-				  StatusCode: 200
-			 } 
-
-	js, err := json.Marshal(resp)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(js)
-	
-}
 
 // Worker ...
 type Worker struct {
-	ID          int
-	masterAdrss string
-	allWorkers  map[int]map[int][]int // {workerID:  {partitionId: [vertexIDs]}}
-	inQueue     []*Message            
-	outQueue    []*Message            
-	currVertex  Vertex                
-	nextVertex  Vertex                
-	vertices    []Vertex              // workers' own vertices
+	ID     int
+	inChan chan ResultMsg
+	inQueue []ResultMsg
+	// outQueue    []*Message
+	masterResp string
+	vertices []Vertex  // workers' own vertices
+	// allWorkers  map[int]map[int][]int // {workerID:  {partitionId: [vertexIDs]}}
+}
+
+func newWorker(id int, ma string) *Worker {
+	w := Worker{}
+	w.ID = id
+
 }
 
 // InitWorkers ...
@@ -49,17 +28,39 @@ func (w *Worker) InitWorkers() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go func(ip string, wg *sync.WaitGroup) {
+	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 
-		http.HandleFunc("/json", jsonHandler)
+		http.HandleFunc("/", handleMessage)
 		http.ListenAndServe(":3000", nil)
-
-	}(w.masterAdrss, &wg)
+	}(&wg)
 
 	wg.Wait()
-	close(masterChan)
 	fmt.Print("Worker ", w.ID, "connected.")
+}
+
+// handleMessage from Master
+func handleMessage(w http.ResponseWriter, r *http.Request) {
+
+	for name, headers := range r.Header {
+		for _, h := range headers {
+			fmt.Println("handler")
+			fmt.Fprintf(w, "%v: %v\n", name, h)
+		}
+	}
+
+	// for {
+	// 	select {
+	// 	case msg := <-w.masterInChan:
+	// 		switch {
+	// 		case msg == "Superstep":
+	// 			w.startSuperstep()
+	// 		case msg == "SaveState":
+	// 			//do something
+	// 		}
+	// 	}
+	// }
+
 }
 
 // loadVertices loads assigned vertices received from Master
@@ -80,15 +81,25 @@ func (w *Worker) startSuperstep() {
 
 	// read inQueue
 
+	var wg sync.WaitGroup
 	for pID, vList := range partitions {
-		go w.superstep(pID)
+		wg.Add(1)
+		defer wg.Done()
+
+		go func() {
+			for v := range w.vertices {
+				// take udf and superstep from Master
+				go v.compute(udf, w, superstep)
+			}
+		}()
+
 	}
-
-	// wait until done -- how are we checking
+	// wait until done
+	wg.Wait()
 
 	for pID, vList := range partitions {
-		go receive(pID) // fill inQueue, receive messages from vertices and add to inQueue
-		go send(pID)    // fill outQueue, send outQueue
+		go rcvFromVertex(pID) // fill inQueue, receive messages from vertices and add to inQueue
+		go sendToWorkers(pID)    // fill outQueue, send outQueue
 	}
 
 	// wait until done -- how are we checking
@@ -98,37 +109,41 @@ func (w *Worker) startSuperstep() {
 
 }
 
-func (w *Worker) superstep(pID int) {
-	for v := range w.Vertices {
-		go v.compute()
-	}
+// receive messages and halt votes after superstep
+func (w *Worker) rcvFromVertex(pID int) {
+	count := 0
 
-}
-
-func (w* Worker) receive(pID int) {
-	for v := range w.vertices {
+	for v := range w.inChan {
 		go func() {
-			
-		}
+			for {
+				select {
+				case msg := <-v:
+					defer wg.Done()
+					w.inQueue = append(w.inQueue, msg)
+
+				// once worker receives all messages
+				case count == len(w.vertices):
+					return
+
+				}
+			}
+		}()
 	}
+
 }
 
 func (w *Worker) sendActiveVertices() {
+	// POST req to Master
+
+	activeVertices := []int
+
 	// get list/number of active vertices
-	// send list/number to Master
-}
-
-func (w *Worker) run() {
-	for {
-		select {
-		case msg := <-w.masterInChan:
-			switch {
-			case msg == "Superstep":
-				w.startSuperstep()
-			case msg == "SaveState":
-				//do something
-			}
+	for message := range w.inQueue {
+		if message.halt == false {
+			activeVertices = append(activeVertices, message.sendID)
 		}
-
 	}
+
+	// send list/number to Master
+	w.masterResp = activeVertices
 }
