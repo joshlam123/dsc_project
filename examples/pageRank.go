@@ -19,8 +19,10 @@ func main() {
 	graph := graph_reader.getGraphFromFile("./data/prob/randM20.json")
 	fmt.Println(graph)
 
-	var error float64 = math.MaxUint32 - 1
+	var error float64 = 1000000.0
 	for error >= errorThres {
+		
+
 		listOfMessages := getMessages() 
 			
 	}
