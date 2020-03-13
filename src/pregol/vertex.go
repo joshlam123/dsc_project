@@ -14,12 +14,12 @@ type Vertex struct {
 	id       int
 	flag     bool
 	val      float64
-	inEdges  []chan map[string]float64
+	inEdges  chan map[string]float64
 	outEdges map[string]float64
 	vertices []Vertex // do i know my peers?
 }
 
-func (v *Vertex) compute(UDF func(placeholder interface{}) interface{}) {
+func (v *Vertex) compute(UDF func(placeholder interface{}) interface{}, owner Worker) {
 	// do computations by iterating over messages from each incoming edge.
 	select {
 	case msg := <-v.inEdges:
@@ -31,10 +31,8 @@ func (v *Vertex) compute(UDF func(placeholder interface{}) interface{}) {
 
 		//TODO: Map return values {outEdge (string): value float64 ...}
 		//TODO: set outgoing edges v.outEdges = xxx
-
-		for i, j := range v.outEdges {
-			v.vertices[strconv.Atoi(i)].inEdges <- j
-		}
+		//TODO: worker-side need channel to receive incoming messages for this super step : inChan []chan map[string]float64
+		owner.inChan[v.id] <- v.outEdges
 
 	default:
 		v.flag = false
