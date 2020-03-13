@@ -7,6 +7,11 @@ import (
 	"os"
 )
 
+type ActiveNode struct {
+	ip            string
+	partitionList []int
+}
+
 type infoReader struct {
 	Name          string
 	NumVertices   int

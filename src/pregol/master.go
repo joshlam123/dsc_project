@@ -18,11 +18,6 @@ type Master struct {
 	ActiveNodes   []ActiveNode
 }
 
-type ActiveNode struct {
-	ip            string
-	partitionList []int
-}
-
 // NewMaster ...
 func NewMaster(ipFile string, numPartitions int) *Master {
 	m := Master{}
