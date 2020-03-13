@@ -9,15 +9,14 @@ import (
 // Worker ...
 type Worker struct {
 	ID     		int
-	inQueue 	[]ResultMsg
-	outQueue    []ResultMsg
-	masterResp 	string
+	inQueue 	[]float64			//TODO: do we need to send ID of senderVertex
+	outQueue    map[int][]float64
+	masterResp 	string				//TODO: change type
 	partitions 	map[int][]Vertex
 }
 
 func newWorker(id int, ma string) *Worker {
 	w := Worker{}
-	w.ID = id
 
 }
 
@@ -36,9 +35,8 @@ func (w *Worker) InitWorkers() {
 	wg.Wait()
 	fmt.Print("Worker ", w.ID, "connected.")
 }
-
-// handleMaster incoming messages
-// TODO: 
+ 
+// TODO: handleMaster incoming messages
 func handleMaster(w http.ResponseWriter, r *http.Request) {
 
 	for name, headers := range r.Header {
@@ -89,13 +87,20 @@ func (w *Worker) startSuperstep() {
 
 }
 
-func (w *Worker) readMessage(msg ResultMsg) {
-	// fill outQueue 
-	// TODO: Luoqi collate messages to each vertice
+// parse messages from vertices into outQueue and activeVertices
+func (w *Worker) readMessage(rm ResultMsg) { 
+	// TODO: Luoqi do we need to also send ID of senderVertex?
+	for dest, m := range rm.msg {
+		if v, ok := w.outQueue[dest]; ok {
+			v = append(v, m)
+		} else {
+			w.outQueue[dest] = []float64{m}
+		}
+	}
 
 	activeVertices := []int
 
-	// get list/number of active vertices
+	// get list of active vertices
 	for message := range w.inQueue {
 		if message.halt == false {
 			activeVertices = append(activeVertices, message.sendID)
