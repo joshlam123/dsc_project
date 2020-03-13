@@ -1,8 +1,9 @@
 package pregol
 
-type Message struct {
-	recID int
-	val   float64
+import "fmt"
+
+type ResultMsg struct {
+	msg map[int]float64
 }
 
 type Vertex struct {
@@ -24,7 +25,7 @@ func (v *Vertex) compute(udf UDF, owner Worker, superstep int) {
 		v.flag, v.outMsg = udf(v, superstep)
 
 		//TODO: worker-side need channel to receive incoming messages for this super step : inChan []chan map[int]float64
-		owner.inChan[v.Id] <- v.outMsg
+		owner.inChan <- v.outMsg
 
 	default:
 		if v.flag {
@@ -36,4 +37,8 @@ func (v *Vertex) compute(udf UDF, owner Worker, superstep int) {
 // TODO: Worker-side need a channel to receive votes to halt from each worker: halt []chan int
 func (v *Vertex) VoteToHalt(owner Worker) {
 	owner.halt[v.Id] <- 0
+}
+
+func main() {
+	fmt.Println("hello world")
 }
