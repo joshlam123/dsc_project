@@ -8,14 +8,11 @@ import (
 
 // Worker ...
 type Worker struct {
-	ID     int
-	inChan chan ResultMsg
-	inQueue []ResultMsg
-	// outQueue    []*Message
-	masterResp string
-	partitions map[int][]Vertex
-	vertices []Vertex  // workers' own vertices
-	// allWorkers  map[int]map[int][]int // {workerID:  {partitionId: [vertexIDs]}}
+	ID     		int
+	inQueue 	[]ResultMsg
+	outQueue    []ResultMsg
+	masterResp 	string
+	partitions 	map[int][]Vertex
 }
 
 func newWorker(id int, ma string) *Worker {
@@ -40,8 +37,9 @@ func (w *Worker) InitWorkers() {
 	fmt.Print("Worker ", w.ID, "connected.")
 }
 
-// handleMessage from Master
-func handleMessage(w http.ResponseWriter, r *http.Request) {
+// handleMaster incoming messages
+// TODO: 
+func handleMaster(w http.ResponseWriter, r *http.Request) {
 
 	for name, headers := range r.Header {
 		for _, h := range headers {
@@ -52,22 +50,20 @@ func handleMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 // loadVertices loads assigned vertices received from Master
-func (w *Worker) loadVertices() {
-	// check whether assigned vertex is in assigned partition
+func (w *Worker) loadVertices(gr graphReader) {
 	partitionsMap := w.allWorkers[w.ID]
 
 	for k, v := range partitionsMap {
-		// TODO
+		// TODO: populate vertices
 	}
 
-	// if yes, add to w.Vertices
-	// if no, send message to remote peer
 }
 
 func (w *Worker) startSuperstep() {
 	partitions := w.allWorkers[w]
 
-	// read inQueue
+	// TODO: read inQueue
+	// TODO: send outQueue
 
 	var wg sync.WaitGroup
 	for pID, vList := range partitions {
@@ -79,7 +75,8 @@ func (w *Worker) startSuperstep() {
 				defer wg.Done()
 				for v := range vList {
 					ret = v.compute(udf, w, superstep)
-					w.inQueue = append(w.inQueue, ret)
+					w.readMessage(ret)
+					w.outQueue = append(w.outQueue, ret)
 				}
 			}(vList, udf, superstep)
 		}
@@ -87,45 +84,14 @@ func (w *Worker) startSuperstep() {
 	}
 	wg.Wait()
 
-	for pID, vList := range partitions {
-		// go rcvFromVertex() 
-		go sendToWorkers(pID)    // fill outQueue, send outQueue
-	}
-
-	// wait until done -- how are we checking
-
 	// inform Master that superstep has completed
 	w.sendActiveVertices()
 
 }
 
-// receive messages and halt votes from vertices after superstep
-// func (w *Worker) rcvFromVertex() {
-// 	count := 0
-// 	for v := range w.inChan {
-// 		go func() {
-// 			for {
-// 				select {
-// 				case msg := <-v:
-// 					defer wg.Done()
-// 					w.inQueue = append(w.inQueue, msg)
-
-// 				// once worker receives all messages
-// 				case count == len(w.vertices):
-// 					return
-// 				}
-// 			}
-// 		}()
-// 	}
-
-// }
-
-func (w *Worker) sendToWorkers() {
-
-}
-
-func (w *Worker) sendActiveVertices() {
-	// POST req to Master
+func (w *Worker) readMessage(msg ResultMsg) {
+	// fill outQueue 
+	// TODO: Luoqi collate messages to each vertice
 
 	activeVertices := []int
 
@@ -138,4 +104,13 @@ func (w *Worker) sendActiveVertices() {
 
 	// send list/number to Master
 	w.masterResp = activeVertices
+
+}
+
+func (w *Worker) sendActiveVertices() {
+	// TODO: POST req to Master
+}
+
+func (w *Worker) Run() {
+	// TODO: gerald
 }
