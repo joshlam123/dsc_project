@@ -74,7 +74,6 @@ func (w *Worker) startSuperstep() {
 				for v := range vList {
 					ret = v.compute(udf, w, superstep)
 					w.readMessage(ret)
-					w.outQueue = append(w.outQueue, ret)
 				}
 			}(vList, udf, superstep)
 		}
@@ -87,9 +86,9 @@ func (w *Worker) startSuperstep() {
 
 }
 
-// parse messages from vertices into outQueue and activeVertices
+// reorder messages from vertices into outQueue and activeVertices
 func (w *Worker) readMessage(rm ResultMsg) { 
-	// TODO: Luoqi do we need to also send ID of senderVertex?
+	
 	for dest, m := range rm.msg {
 		if v, ok := w.outQueue[dest]; ok {
 			v = append(v, m)
@@ -99,12 +98,8 @@ func (w *Worker) readMessage(rm ResultMsg) {
 	}
 
 	activeVertices := []int
-
-	// get list of active vertices
-	for message := range w.inQueue {
-		if message.halt == false {
-			activeVertices = append(activeVertices, message.sendID)
-		}
+	if rm.halt == false {
+		activeVertices = append(activeVertices, rm.sendID)
 	}
 
 	// send list/number to Master
