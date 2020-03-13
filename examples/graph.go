@@ -51,9 +51,12 @@ func main() {
 	fmt.Println(os.Args[2])
 
 	maxNoNodes, _ := strconv.Atoi(os.Args[2])
+
+	nodeVals := make(map[int]int)
     distinctPoints := make(map[int]Node)
 
     for node := 1; node <= maxNoNodes; node++ {
+    	// generate the nodevalues first
     	rand.Seed(time.Now().UnixNano())
 
     	// turn this on only if the algorithm can handle negative nodes
@@ -66,19 +69,29 @@ func main() {
     		minValSoFar = nodeVal
     	}
 
-    	// if need to handle if node is negatie
-    	numNodes := rand.Intn(maxNoNodes)
-    	fmt.Println("Number of nodes %d", numNodes)
+    	nodeVals[node] = nodeVal
 
-    	childMap := make(map[int]int)
-
-		for point2 := 1; point2 <= numNodes; point2++  {
-			// childVal := rand.Float64() * maxNoNodes
-			childVal := rand.Intn(maxNoNodes)
- 			childMap[point2] = childVal
     	}
 
-    distinctPoints[node] = Node{Value:nodeVal, OutgoingEdges:childMap}
+    for node := 1; node <= maxNoNodes; node++ {
+
+	    childMap := make(map[int]int)
+	// for each node, generate a random number of values and take the value from nodeVals
+		numNodes := rand.Intn(maxNoNodes)
+		for numNodes == 0 {
+			numNodes = rand.Intn(maxNoNodes)
+		}
+
+		fmt.Println("Number of nodes %d", numNodes)
+		for node2 := 1; node2 <= numNodes; node2++ {
+			rndNode := rand.Intn(maxNoNodes)
+			for rndNode == 0 {
+				rndNode = rand.Intn(maxNoNodes)
+			}
+
+			childMap[rndNode] = nodeVals[rndNode]
+		}
+	    distinctPoints[node] = Node{Value:nodeVals[node], OutgoingEdges:childMap}
  	}
     
  	d2 := map[string]int{"max_value":maxValSoFar, "min_value":minValSoFar}
