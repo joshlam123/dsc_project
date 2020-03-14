@@ -49,11 +49,16 @@ func handleMaster(w http.ResponseWriter, r *http.Request) {
 }
 
 // loadVertices loads assigned vertices received from Master
-func (w *Worker) loadVertices(gr graphReader) {
+func (w *Worker) loadVertices(gr graphReader) {	
+	// what is inside partitionsMap??
 	partitionsMap := w.allWorkers[w.ID]
+
+	// belongs to each worker
+	myPartitionVertices := make(map[int]map[int]float64)
 
 	for k, v := range partitionsMap {
 		// TODO: populate vertices
+		myPartitionVertices[w.ID] = v
 	}
 
 }
