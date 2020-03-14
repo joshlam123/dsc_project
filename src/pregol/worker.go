@@ -1,6 +1,7 @@
 package pregol
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -8,11 +9,11 @@ import (
 
 // Worker ...
 type Worker struct {
-	ID     		int
-	inQueue 	[]float64			//TODO: do we need to send ID of senderVertex
-	outQueue    map[int][]float64
-	masterResp 	string				//TODO: change type
-	partitions 	map[int][]Vertex
+	ID         int
+	inQueue    []float64 //TODO: do we need to send ID of senderVertex - ID is included in ResultMsg
+	outQueue   map[int][]float64
+	masterResp string //TODO: change type
+	partitions map[int][]Vertex
 }
 
 func newWorker(id int, ma string) *Worker {
@@ -35,7 +36,7 @@ func (w *Worker) InitWorkers() {
 	wg.Wait()
 	fmt.Print("Worker ", w.ID, "connected.")
 }
- 
+
 // TODO: handleMaster incoming messages
 func handleMaster(w http.ResponseWriter, r *http.Request) {
 
@@ -64,12 +65,12 @@ func (w *Worker) startSuperstep() {
 	// TODO: send outQueue
 
 	var wg sync.WaitGroup
-	for pID, vList := range partitions {
+	// add waitgroup for each partition: vertex list
+	for _, _ = range partitions {
 		wg.Add(1)
-		
 
-		for pID, vList := range partitions {
-			go func(){
+		for _, vList := range partitions {
+			go func() {
 				defer wg.Done()
 				for v := range vList {
 					ret = v.compute(udf, w, superstep)
@@ -77,7 +78,6 @@ func (w *Worker) startSuperstep() {
 				}
 			}()
 		}
-
 	}
 	wg.Wait()
 
@@ -87,8 +87,8 @@ func (w *Worker) startSuperstep() {
 }
 
 // reorder messages from vertices into outQueue and activeVertices
-func (w *Worker) readMessage(rm ResultMsg) { 
-	
+func (w *Worker) readMessage(rm ResultMsg) {
+
 	for dest, m := range rm.msg {
 		if v, ok := w.outQueue[dest]; ok {
 			v = append(v, m)
@@ -97,9 +97,9 @@ func (w *Worker) readMessage(rm ResultMsg) {
 		}
 	}
 
-	activeVertices := []int
+	var activeVertices []int
 	if rm.halt == false {
-		activeVertices = append(activeVertices, rm.sendID)
+		activeVertices = append(activeVertices, rm.sendId)
 	}
 
 	// send list/number to Master
