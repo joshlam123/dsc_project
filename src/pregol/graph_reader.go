@@ -6,9 +6,9 @@ import (
 	"os"
 )
 
-type ActiveNode struct {
-	ip            string
-	partitionList []int
+type activeNode struct {
+	IP            string
+	PartitionList []int
 }
 
 type infoReader struct {
@@ -32,8 +32,8 @@ type graphReader struct {
 	Info            infoReader
 	Vertices        map[int]vertexReader
 	Edges           map[int][]edgeReader
-	ActiveNodes     []ActiveNode
 	PartitionToNode map[int]int
+	ActiveNodes     []activeNode
 }
 
 func newGraphReader() graphReader {
