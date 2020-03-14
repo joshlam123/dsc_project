@@ -17,43 +17,50 @@ import (
 type Master struct {
 	numPartitions int
 	checkpoint    int
-	nodeAdrs      []string
-	ActiveNodes   []ActiveNode
+	nodeAdrs      map[string]bool
+	activeNodes   []activeNode
 	graphsToNodes []graphReader
+	graphFile     string
+	client        *http.Client
 }
 
-// NewMaster ...
-func NewMaster(numPartitions, checkpoint int, ipFile string) *Master {
+// NewMaster Constructor for Master struct
+func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string) *Master {
 	m := Master{}
 	m.numPartitions = numPartitions
 	m.checkpoint = checkpoint
-	m.ActiveNodes = make([]ActiveNode, 0)
+	m.activeNodes = make([]activeNode, 0)
+	m.graphFile = graphFile
+	m.client = &http.Client{
+		Timeout: time.Second * 5,
+	}
 
 	dat, err := ioutil.ReadFile(ipFile)
 	if err != nil {
 		panic(err)
 	}
-	m.nodeAdrs = strings.Split(string(dat), "\n")
+	m.nodeAdrs = make(map[string]bool)
+	for _, ip := range strings.Split(string(dat), "\n") {
+		m.nodeAdrs[ip] = false
+	}
 
 	return &m
 }
 
-// InitConnections ...
-func (m *Master) InitConnections(ipFile string) {
+// InitConnections Initializes connections with all machines via ip addresses found in nodeAdrs []string.
+// Generates a list of activeNodes which are the machines that Master will request to start superstep.
+func (m *Master) InitConnections() {
 
 	var wg sync.WaitGroup
-	activeNodeChan := make(chan ActiveNode, len(m.nodeAdrs))
-	for i := range m.nodeAdrs {
+	activeNodeChan := make(chan activeNode, len(m.nodeAdrs))
+	for ip := range m.nodeAdrs {
 		wg.Add(1)
 
-		go func(ip string, wg *sync.WaitGroup, activeNodeChan chan ActiveNode) {
+		// Initialize connection with all nodes, and check if they are active using GET request
+		go func(ip string, wg *sync.WaitGroup, activeNodeChan chan activeNode) {
 			defer wg.Done()
 
-			var client = &http.Client{
-				Timeout: time.Second * 10,
-			}
-
-			resp, err := client.Get(getURL(ip, "3000"))
+			resp, err := m.client.Get(getURL(ip, "3000", "initConnection"))
 			if err != nil {
 				return
 			}
@@ -62,7 +69,7 @@ func (m *Master) InitConnections(ipFile string) {
 
 			if resp.StatusCode == http.StatusOK {
 				fmt.Println("Machine", ip, "connected.")
-				activeNodeChan <- ActiveNode{ip, make([]int, 0)}
+				activeNodeChan <- activeNode{ip, make([]int, 0)}
 
 				bodyBytes, err := ioutil.ReadAll(resp.Body)
 				if err != nil {
@@ -71,16 +78,18 @@ func (m *Master) InitConnections(ipFile string) {
 				bodyString := string(bodyBytes)
 				fmt.Println(bodyString)
 			}
-		}(m.nodeAdrs[i], &wg, activeNodeChan)
+		}(ip, &wg, activeNodeChan)
 
 	}
 	wg.Wait()
 	close(activeNodeChan)
+
 	for elem := range activeNodeChan {
-		m.ActiveNodes = append(m.ActiveNodes, elem)
+		m.activeNodes = append(m.activeNodes, elem)
+		m.nodeAdrs[elem.IP] = true
 	}
 
-	if len(m.ActiveNodes) == 0 {
+	if len(m.activeNodes) == 0 {
 		panic(errors.New("no active nodes"))
 	}
 }
@@ -88,11 +97,12 @@ func (m *Master) InitConnections(ipFile string) {
 // AssignPartitions Assign partitions to active nodes
 func (m *Master) AssignPartitions(graphFile string) {
 	g := getGraphFromFile(graphFile)
-	m.graphsToNodes = make([]graphReader, len(m.ActiveNodes))
+	g.PartitionToNode = make(map[int]int)
+	m.graphsToNodes = make([]graphReader, len(m.activeNodes))
 
 	for i := 0; i < m.numPartitions; i++ {
-		cNode := i % len(m.ActiveNodes)
-		m.ActiveNodes[cNode].partitionList = append(m.ActiveNodes[cNode].partitionList, i)
+		cNode := i % len(m.activeNodes)
+		m.activeNodes[cNode].PartitionList = append(m.activeNodes[cNode].PartitionList, i)
 		g.PartitionToNode[i] = cNode
 	}
 
@@ -100,12 +110,12 @@ func (m *Master) AssignPartitions(graphFile string) {
 		m.graphsToNodes[i] = newGraphReader()
 		m.graphsToNodes[i].Info = g.Info
 		m.graphsToNodes[i].Info.NodeID = i
-		m.graphsToNodes[i].ActiveNodes = m.ActiveNodes
+		m.graphsToNodes[i].ActiveNodes = m.activeNodes
 	}
 
 	for k, v := range g.Vertices {
 		partitionIdx := getPartition(k, m.numPartitions)
-		cNode := partitionIdx % len(m.ActiveNodes)
+		cNode := partitionIdx % len(m.activeNodes)
 		m.graphsToNodes[cNode].Vertices[k] = v
 		m.graphsToNodes[cNode].Edges[k] = g.Edges[k]
 	}
@@ -115,20 +125,20 @@ func (m *Master) AssignPartitions(graphFile string) {
 func (m *Master) DisseminateGraph() {
 	var wg sync.WaitGroup
 
-	for idx, aNode := range m.ActiveNodes {
+	for idx, aNode := range m.activeNodes {
+		wg.Add(1)
+
+		// Send graph to all active nodes through POST request
 		go func(ip string, wg *sync.WaitGroup, graphToSend graphReader) {
 			defer wg.Done()
 
-			var client = &http.Client{
-				Timeout: time.Second * 10,
-			}
-			req, err := http.NewRequest("POST", getURL(ip, "3000"), bytes.NewBuffer(getJSONByteFromGraph(graphToSend)))
+			req, err := http.NewRequest("POST", getURL(ip, "3000", "disseminateGraph"), bytes.NewBuffer(getJSONByteFromGraph(graphToSend)))
 
 			if err != nil {
 				panic(err)
 			}
 
-			resp, err2 := client.Do(req)
+			resp, err2 := m.client.Do(req)
 
 			if err2 != nil {
 				panic(err2)
@@ -146,13 +156,14 @@ func (m *Master) DisseminateGraph() {
 				bodyString := string(bodyBytes)
 				fmt.Println(bodyString)
 			}
-		}(aNode.ip, &wg, m.graphsToNodes[idx])
-		wg.Wait()
+		}(aNode.IP, &wg, m.graphsToNodes[idx])
 	}
+
+	wg.Wait()
 }
 
-func getURL(ip, port string) string {
-	return "http://" + strings.TrimSpace(ip) + ":" + port
+func getURL(ip, port, path string) string {
+	return "http://" + strings.TrimSpace(ip) + ":" + port + "/" + path
 }
 
 // getPartition Get the partition which a vertex belongs to.
@@ -162,85 +173,104 @@ func getPartition(vertexID int, numPartitions int) int {
 	return int(algorithm.Sum32() % uint32(numPartitions))
 }
 
+func (m *Master) rollback(graphFile string) {
+	m.InitConnections()
+	m.AssignPartitions(graphFile)
+	m.DisseminateGraph()
+}
+
+// Run ...
 func (m *Master) Run() {
 	currentIter := 0
+	nodeDied := true
+	nodeRevived := false
+	checkpointFile := "checkpoint.json"
 
 	for {
-		if currentIter%m.checkpoint == 0 {
-			// Save
+		if nodeDied {
+			if currentIter < m.checkpoint {
+				m.rollback(m.graphFile)
+				currentIter = 0
+			} else {
+				m.rollback(checkpointFile)
+				// TODO: Load messages
+				currentIter -= (currentIter % m.checkpoint)
+			}
+			nodeDied = false
+			continue
 		}
+
+		if currentIter%m.checkpoint == 0 {
+			// TODO: Save worker states
+
+			if nodeRevived {
+				m.rollback(checkpointFile)
+				// TODO: Load messages
+				nodeRevived = false
+			}
+		}
+
+		nodeDiedChan := make(chan bool, len(m.activeNodes))
 
 		var wg sync.WaitGroup
-		for idx, aNode := range m.ActiveNodes {
-			// Start Superstep
-			wg.Add(1)
-			go func(wg *sync.WaitGroup) {
-				defer wg.Done()
-				// Start superstep
+		for ip, active := range m.nodeAdrs {
+			if active {
+				wg.Add(1)
+				go func(ip string, nodeDiedChan chan bool, wg *sync.WaitGroup) {
+					// TODO: Start superstep and ping
+					defer wg.Done()
 
-				// While not end, ping
+					resp, err := m.client.Get(getURL(ip, "3000", "startSuperstep"))
+					if err != nil {
+						nodeDiedChan <- true
+						return
+					}
 
-			}(&wg)
+					if resp.StatusCode != http.StatusOK {
+						nodeDiedChan <- true
+						return
+					}
+
+					for {
+						pingResp, err2 := m.client.Get(getURL(ip, "3000", "ping"))
+						if err2 != nil {
+							nodeDiedChan <- true
+							return
+						}
+
+						if pingResp.StatusCode != http.StatusOK {
+							nodeDiedChan <- true
+							return
+						}
+
+						bodyBytes, _ := ioutil.ReadAll(resp.Body)
+						result := string(bodyBytes)
+						if result == "done" {
+							return
+						} else {
+							time.Sleep(time.Second * 10)
+						}
+					}
+
+				}(ip, nodeDiedChan, &wg)
+			} else {
+				// TODO: Ping
+				go func(ip string) {
+
+				}(ip)
+			}
 		}
 
+		//WaitGrp, End Pings
 		wg.Wait()
-	}
-}
-
-func postJSON(ip string, jsonFile []byte, timeout int) {
-	var client = &http.Client{
-		Timeout: time.Second * time.Duration(timeout),
-	}
-	req, err := http.NewRequest("POST", getURL(ip, "3000"), bytes.NewBuffer(jsonFile))
-
-	if err != nil {
-		panic(err)
-	}
-
-	resp, err2 := client.Do(req)
-
-	if err2 != nil {
-		panic(err2)
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
+		close(nodeDiedChan)
+		for ifNodeDied := range nodeDiedChan {
+			nodeDied = ifNodeDied || nodeDied
 		}
-		bodyString := string(bodyBytes)
-		fmt.Println(bodyString)
-	}
-}
 
-func postJSONWithWait(ip string, wg *sync.WaitGroup, jsonFile []byte, timeout int) {
-	defer wg.Done()
+		// Check nodeRevived
 
-	var client = &http.Client{
-		Timeout: time.Second * time.Duration(timeout),
-	}
-	req, err := http.NewRequest("POST", getURL(ip, "3000"), bytes.NewBuffer(jsonFile))
-
-	if err != nil {
-		panic(err)
-	}
-
-	resp, err2 := client.Do(req)
-
-	if err2 != nil {
-		panic(err2)
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		bodyString := string(bodyBytes)
-		fmt.Println(bodyString)
+		// TODO: Check end condition
+		currentIter++
 	}
 }

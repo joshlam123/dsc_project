@@ -1,8 +1,8 @@
 package pregol
 
 import (
-	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"sync"
 )
@@ -116,6 +116,39 @@ func (w *Worker) sendActiveVertices() {
 	// TODO: POST req to Master
 }
 
+func initConnectionHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "connected")
+}
+
+func disseminateGraphHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "received")
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		panic(err)
+	}
+	bodyString := string(bodyBytes)
+	fmt.Println(bodyString)
+	// Handle Graph here
+}
+
+func startSuperstepHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "startedSuperstep")
+}
+
+func saveStateHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func pingHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func (w *Worker) Run() {
 	// TODO: gerald
+	http.HandleFunc("/initConnection", initConnectionHandler)
+	http.HandleFunc("/disseminateGraph", disseminateGraphHandler)
+	http.HandleFunc("/startSuperstep", disseminateGraphHandler)
+	http.HandleFunc("/saveState", saveStateHandler)
+	http.HandleFunc("/ping", pingHandler)
+	http.ListenAndServe(":3000", nil)
 }
