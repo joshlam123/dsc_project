@@ -140,11 +140,16 @@ func startSuperstepHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func saveStateHandler(w http.ResponseWriter, r *http.Request) {
-
+	// josh - wrote a file in utilities for you to save anything you want to json file
+	// takes the format: writeToJson(jsonFile interface{}, name string)
+	writeToJson()
 }
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
-
+	switch r.Method {
+		case "GET":		
+		// do something here - send back to master - added by josh
+	}
 }
 
 func Run() {
@@ -154,5 +159,7 @@ func Run() {
 	http.HandleFunc("/startSuperstep", disseminateGraphHandler)
 	http.HandleFunc("/saveState", saveStateHandler)
 	http.HandleFunc("/ping", pingHandler)
+	// added by josh for GUI
+	http.HandleFunc("/gui", pingHandler)
 	http.ListenAndServe(":3000", nil)
 }

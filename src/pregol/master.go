@@ -24,6 +24,11 @@ type Master struct {
 	client        *http.Client
 }
 
+type guiSend struct {
+	master Master
+	iter int
+}
+
 // NewMaster Constructor for Master struct
 func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string) *Master {
 	m := Master{}
@@ -202,7 +207,7 @@ func (m *Master) Run() {
 
 		if currentIter%m.checkpoint == 0 {
 			// TODO: Save worker states
-
+			
 			if nodeRevived {
 				m.rollback(checkpointFile)
 				// TODO: Load messages
@@ -273,5 +278,9 @@ func (m *Master) Run() {
 
 		// TODO: Check end condition
 		currentIter++
+
+		// TODO: JOSH send the master condition to GUI
+		guiMsg := guiSend{master:m, iter:currentIter}
+		req, err := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer(guiMsg), currentIter)
 	}
 }
