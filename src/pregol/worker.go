@@ -12,8 +12,11 @@ var UdfChan chan UDF = make(chan UDF)
 
 // Worker ...
 type Worker struct {
-	ID          int
-	inQueue     []float64 //TODO: do we need to send ID of senderVertex - ID is included in ResultMsg
+	ID int
+	//inQueue     []float64 //TODO: do we need to send ID of senderVertex - ID is included in ResultMsg
+	//outQueue    map[int][]float64
+
+	inQueue     []ResultMsg
 	outQueue    map[int][]float64
 	masterResp  string //TODO: change type
 	partitions  map[int][]Vertex
@@ -33,7 +36,7 @@ func (w *Worker) loadVertices(gr graphReader) {
 	// belongs to each worker
 	myPartitionVertices := make(map[int]map[int]float64)
 
-	for k, v := range partitionsMap {
+	for _, v := range partitionsMap {
 		// TODO: populate vertices
 		myPartitionVertices[w.ID] = v
 	}
@@ -43,12 +46,29 @@ func (w *Worker) loadVertices(gr graphReader) {
 func (w *Worker) startSuperstep() {
 	partitions := w.allWorkers[w]
 
-	// TODO: read inQueue
-	// TODO: send outQueue
+	sendOwn := make(map[int][]float64)
+	proxyOut := make(map[int]ResultMsg)
+
+	for i := range w.inQueue {
+		for j, k := range w.inQueue[i].msg {
+			for l := range w.partitions[w.ID] {
+				if j == w.partitions[w.ID][l].Id {
+					sendOwn[j] = append(sendOwn[j], k)
+				} else {
+
+				}
+			}
+		}
+	}
+
+	//send messages in outQueue to own vertices
+	for m, n := range sendOwn {
+		w.partitions[w.ID][m].InMsg <- n //TODO: fix referencing for correct vertex
+	}
 
 	var wg sync.WaitGroup
 	// add waitgroup for each partition: vertex list
-	for _, _ = range partitions {
+	for range partitions {
 		wg.Add(1)
 
 		for _, vList := range partitions {
