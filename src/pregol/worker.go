@@ -49,7 +49,7 @@ func (w *Worker) startSuperstep() {
 	partitions := w.allWorkers[w]
 
 	sendOwn := make(map[int][]float64)
-	proxyOut := make(map[int]ResultMsg)
+	proxyOut := make(map[int][]float64)
 
 	for i := range w.inQueue {
 		for j, k := range w.inQueue[i].msg {
@@ -57,7 +57,7 @@ func (w *Worker) startSuperstep() {
 				if j == w.partitions[w.ID][l].Id {
 					sendOwn[j] = append(sendOwn[j], k)
 				} else {
-
+					proxyOut[j] = append(proxyOut[j], k)
 				}
 			}
 		}
@@ -66,6 +66,11 @@ func (w *Worker) startSuperstep() {
 	//send messages in outQueue to own vertices
 	for m, n := range sendOwn {
 		w.partitions[w.ID][m].InMsg <- n //TODO: fix referencing for correct vertex
+	}
+
+	w.outQueue = proxyOut
+	for i := range w.outQueue {
+		// TODO: send vertices to other workers
 	}
 
 	var wg sync.WaitGroup
