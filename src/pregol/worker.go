@@ -33,7 +33,7 @@ func (w *Worker) createAndLoadVertices(gr graphReader) {
 	// create Vertices
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
-		v := Vertex{vID, false, vReader.Value, make(map[int]float64), make(chan map[int]float64), make(map[int]float64)}
+		v := Vertex{vID, false, vReader.Value, make([]float64, 0), make(chan []float64), make(map[int]float64)}
 
 		// add to Worker's partition list
 		if val, ok := w.partitions[partID]; ok {
