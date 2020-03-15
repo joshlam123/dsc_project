@@ -8,7 +8,6 @@ import (
 )
 
 var w Worker = Worker{}
-var UdfChan chan UDF = make(chan UDF)
 
 // Worker ...
 type Worker struct {
@@ -21,8 +20,9 @@ type Worker struct {
 	graphReader graphReader
 }
 
-func InitWorker() {
-	w.udf = <-UdfChan
+// SetUdf sets the user-defined function for `w`
+func SetUdf(udf UDF) {
+	w.udf = udf
 }
 
 // loadVertices loads assigned vertices received from Master
