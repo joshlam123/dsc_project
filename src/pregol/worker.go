@@ -26,18 +26,19 @@ func InitWorker() {
 }
 
 // loadVertices loads assigned vertices received from Master
-func (w *Worker) loadVertices(gr graphReader) {
-	// what is inside partitionsMap??
-	partitionsMap := w.allWorkers[w.ID]
+func (w *Worker) createAndLoadVertices(gr graphReader) {
+	// create Vertices
+	for vID, vReader := range gr.Vertices {
+		partID := getPartition(vID, gr.Info.NumPartitions)
+		v := Vertex{vID, false, vReader.Value, make(map[int]float64), make(chan map[int]float64), make(map[int]float64)}
 
-	// belongs to each worker
-	myPartitionVertices := make(map[int]map[int]float64)
-
-	for k, v := range partitionsMap {
-		// TODO: populate vertices
-		myPartitionVertices[w.ID] = v
+		// add to Worker's partition list
+		if val, ok := w.partitions[partID]; ok {
+			val = append(val, v)
+		} else {
+			w.partitions[partID] = []Vertex{v}
+		}
 	}
-
 }
 
 func (w *Worker) startSuperstep() {
@@ -106,6 +107,7 @@ func disseminateGraphHandler(w http.ResponseWriter, r *http.Request) {
 	bodyString := string(bodyBytes)
 	fmt.Println(bodyString)
 	// Handle Graph here
+	// call w.createAndLoadVertices(graphReader)
 }
 
 func startSuperstepHandler(w http.ResponseWriter, r *http.Request) {
