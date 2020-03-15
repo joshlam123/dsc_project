@@ -4,7 +4,8 @@ import (
 	"../../src/pregol"
 )
 
-func MaxStep(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
+// MaxValue represents the Pregel program for finding the max value among all vertices
+func MaxValue(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 	var msgs map[int]float64
 	// algorithm:
 	// 1. take max(value, incomingValues...)
@@ -23,4 +24,9 @@ func MaxStep(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 	}
 	// 3. always halt, and send messages if any
 	return true, msgs
+}
+
+func main() {
+	pregol.SetUdf(MaxValue)
+	pregol.Run()
 }

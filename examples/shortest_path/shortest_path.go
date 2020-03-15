@@ -6,19 +6,19 @@ import (
 	"../../src/pregol"
 )
 
-const SOURCE_ID int = 1
-
-func ShortestPath(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
+// MakeShortestPath returns a function which is a pregel program for finding the
+// single-source shortest paths from the vertex with id `sourceID`
+func MakeShortestPath(sourceID int) pregol.UDF {
 	var msgs map[int]float64
 	if superstep == 0 {
-		if vertex.Id == SOURCE_ID {
+		if vertex.Id == SourceId {
 			vertex.Val = 0
 		} else {
 			vertex.Val = math.Inf(+1)
 		}
 	}
 	newMin = false
-	for _, msg := range vertex.InMsgs {
+	for _, msg := range vertex.InEdges {
 		if msg < vertex.Val {
 			vertex.Val = msg
 			newMin = true
@@ -30,4 +30,10 @@ func ShortestPath(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) 
 		}
 	}
 	return true, msgs
+}
+
+func main() {
+	shortestPath := MakeShortestPath(sourceID)
+	pregol.SetUdf(shortestPath)
+	pregol.Run()
 }
