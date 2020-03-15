@@ -212,6 +212,8 @@ func (m *Master) Run() {
 
 		nodeDiedChan := make(chan bool, len(m.activeNodes))
 
+		// endPings := make(chan bool, len(m.nodeAdrs)-len(m.activeNodes))
+
 		var wg sync.WaitGroup
 		for ip, active := range m.nodeAdrs {
 			if active {
@@ -247,9 +249,8 @@ func (m *Master) Run() {
 						result := string(bodyBytes)
 						if result == "done" {
 							return
-						} else {
-							time.Sleep(time.Second * 10)
 						}
+						time.Sleep(time.Second * 10)
 					}
 
 				}(ip, nodeDiedChan, &wg)

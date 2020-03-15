@@ -1,11 +1,17 @@
 package main
 
 import (
-	"./src/pregol"
+	"fmt"
+	"pregol"
 )
 
-//set GOPATH=%GOPATH%;C:\Users\wooge\OneDrive\Desktop\dsc_project
 func main() {
-	w := pregol.Worker{}
-	w.Run()
+	pregol.InitWorker()
+	pregol.UdfChan <- func(vertex *Vertex, superstep int) (bool, map[int]float64) {
+		// Do smth
+
+		return (false, make(map[int]float64))
+	}
+	pregol.Run()
+	select {}
 }

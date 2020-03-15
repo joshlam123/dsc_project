@@ -7,49 +7,26 @@ import (
 	"sync"
 )
 
+var w Worker = Worker{}
+var UdfChan chan UDF = make(chan UDF)
+
 // Worker ...
 type Worker struct {
-	ID         int
-	inQueue    []float64 //TODO: do we need to send ID of senderVertex - ID is included in ResultMsg
-	outQueue   map[int][]float64
-	masterResp string //TODO: change type
-	partitions map[int][]Vertex
+	ID          int
+	inQueue     []float64 //TODO: do we need to send ID of senderVertex - ID is included in ResultMsg
+	outQueue    map[int][]float64
+	masterResp  string //TODO: change type
+	partitions  map[int][]Vertex
+	udf         UDF
+	graphReader graphReader
 }
 
-func newWorker(id int, ma string) *Worker {
-	w := Worker{}
-
-}
-
-// InitWorkers ...
-func (w *Worker) InitWorkers() {
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go func(wg *sync.WaitGroup) {
-		defer wg.Done()
-
-		http.HandleFunc("/", handleMessage)
-		http.ListenAndServe(":3000", nil)
-	}(&wg)
-
-	wg.Wait()
-	fmt.Print("Worker ", w.ID, "connected.")
-}
-
-// TODO: handleMaster incoming messages
-func handleMaster(w http.ResponseWriter, r *http.Request) {
-
-	for name, headers := range r.Header {
-		for _, h := range headers {
-			fmt.Println("handler")
-			fmt.Fprintf(w, "%v: %v\n", name, h)
-		}
-	}
+func InitWorker() {
+	w.udf = <-UdfChan
 }
 
 // loadVertices loads assigned vertices received from Master
-func (w *Worker) loadVertices(gr graphReader) {	
+func (w *Worker) loadVertices(gr graphReader) {
 	// what is inside partitionsMap??
 	partitionsMap := w.allWorkers[w.ID]
 
@@ -143,7 +120,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (w *Worker) Run() {
+func Run() {
 	// TODO: gerald
 	http.HandleFunc("/initConnection", initConnectionHandler)
 	http.HandleFunc("/disseminateGraph", disseminateGraphHandler)
