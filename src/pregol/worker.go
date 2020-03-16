@@ -112,11 +112,13 @@ func disseminateMsgFromOutQ() {
 			workerIP := w.graphReader.ActiveNodes[nodeID].IP
 			outQBytes, _ := json.Marshal(outQ)
 
-			// send values to correct worker
-			go func(workerIP string, outQBytes []byte) {
-				// TODO: Add timeout and timeout handlers
-				http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
-			}(workerIP, outQBytes)
+			// TODO: send values to correct worker
+			go func() {
+				request, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
+				if err != nil {
+					log.Fatalln(err)
+				}
+			}()
 		}
 	}
 	select {}
@@ -204,7 +206,7 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer sem.Release(1)
 		resp := map[string][]int{
-			"Active Nodes": w.activeVert,
+			"Active Nodes": w.masterResp,
 		}
 		outBytes, error := json.Marshal(resp)
 		if error != nil {
@@ -220,7 +222,7 @@ func Run() {
 	// TODO: gerald
 	http.HandleFunc("/initConnection", initConnectionHandler)
 	http.HandleFunc("/disseminateGraph", disseminateGraphHandler)
-	http.HandleFunc("/startSuperstep", startSuperstepHandler)
+	http.HandleFunc("/startSuperstep", disseminateGraphHandler)
 	http.HandleFunc("/saveState", saveStateHandler)
 	http.HandleFunc("/ping", pingHandler)
 	http.ListenAndServe(":3000", nil)
