@@ -59,7 +59,6 @@ func createAndLoadVertices(gr graphReader) {
 
 func startSuperstep() {
 
-<<<<<<< HEAD
 	if err := sem.Acquire(ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
 
@@ -79,12 +78,11 @@ func startSuperstep() {
 	// 	}
 	// }
 	// w.outQueue = proxyOut
-=======
+	
 	// sending values to vertices through InMsg Channel
 	for nodeID, val := range w.inQueue {
 		w.partitions[w.ID][nodeID].InMsg <- val
 	}
->>>>>>> 3c12e8ac9f7b83294e24c229a07cc7055e732f18
 
 	var wg sync.WaitGroup
 	// add waitgroup for each partition: vertex list
