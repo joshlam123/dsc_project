@@ -67,10 +67,6 @@ func initVertices(gr graphReader) {
 
 func startSuperstep() {
 
-	if err := pingPong.Acquire(ctx, 1); err != nil {
-		log.Printf("Failed to acquire semaphore: %v", err)
-	}
-
 	defer pingPong.Release(1)
 
 	// sending values to vertices through InMsg Channel
@@ -86,8 +82,10 @@ func startSuperstep() {
 		go func() {
 			defer wg.Done()
 			for vID, v := range vList {
-				ret := v.Compute(w.udf, superstep) //TODO: get superstep number
+				resultmsg := v.Compute(w.udf, superstep) //TODO: get superstep number
 				// TODO: call processVertResult(ret)
+				processVertResult(resultmsg)
+
 			}
 		}()
 	}
@@ -182,6 +180,9 @@ func workerToWorkerHandler() {
 }
 
 func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
+	if err := pingPong.Acquire(ctx, 1); err != nil {
+		log.Printf("Failed to acquire semaphore: %v", err)
+	}
 
 	fmt.Fprintf(rw, "startedSuperstep")
 }
@@ -238,7 +239,7 @@ func Run() {
 	// TODO: gerald
 	http.HandleFunc("/initConnection", initConnectionHandler)
 	http.HandleFunc("/disseminateGraph", disseminateGraphHandler)
-	http.HandleFunc("/startSuperstep", disseminateGraphHandler)
+	http.HandleFunc("/startSuperstep", startSuperstepHandler)
 	http.HandleFunc("/saveState", saveStateHandler)
 	http.HandleFunc("/ping", pingHandler)
 	http.ListenAndServe(":3000", nil)
