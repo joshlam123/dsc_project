@@ -36,7 +36,7 @@ type Worker struct {
 func InitWorker() {
 	w.inQueue = make(map[int][]float64)
 	w.outQueue = make(map[int][]float64)
-	w.partToVert = make(map[int]map[int]Vertex)
+	w.partToVert = make(map[int]map[int]*Vertex)
 }
 
 // SetUdf sets the user-defined function for `w`
@@ -64,7 +64,7 @@ func initVertices(gr graphReader) {
 			gr.Edges[vID]}
 
 		// add to Worker's partition list
-		w.partToVert[partID][v.Id] = v
+		w.partToVert[partID][v.Id] = &v
 	}
 }
 
