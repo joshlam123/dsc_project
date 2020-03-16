@@ -145,7 +145,8 @@ func saveStateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// define the format of the response
-
+	w.graphReader
+	w.partitions
 
 	// send back the response here - encoded as json or something
 
