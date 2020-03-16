@@ -1,13 +1,17 @@
 package pregol
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"sync"
 )
 
 var w Worker = Worker{}
+var inChanLock = sync.RWMutex{}
 
 // Worker ...
 type Worker struct {
@@ -74,25 +78,54 @@ func (w *Worker) startSuperstep() {
 }
 
 func (w *Worker) disseminateMsg() {
-	for m, n := range w.outQueue {
-		belong := false
-		for o := range w.partitions[w.ID] {
-			if o == m {
-				//send to own vertices directly if they belong in own partition
-				belong = false
-				w.partitions[w.ID][m].InMsg <- n //TODO: fix referencing for correct vertex
-			}
-		}
-		if !belong {
-			// TODO: send values to correct worker
+	nodeToOutQ := make(map[int]map[int][]float64)
 
+	for m, n := range w.outQueue {
+		//belong := false
+		//for o := range w.partitions[w.ID] {
+		//	if o == m {
+		//		//send to own vertices directly if they belong in own partition
+		//		belong = true
+		//		w.partitions[w.ID][m].InMsg <- n //TODO: fix referencing for correct vertex
+		//	}
+		//}
+
+		partID := getPartition(m, w.graphReader.Info.NumPartitions)
+		workerID := w.graphReader.PartitionToNode[partID]
+		nodeToOutQ[workerID][m] = n
+	}
+
+	for nodeID, outQ := range nodeToOutQ {
+
+		if nodeID == w.graphReader.Info.NodeID {
+			// send to own vertices
+
+			go func(nodeID int, outQ map[int][]float64) {
+				inChanLock.Lock()
+				defer inChanLock.Unlock()
+
+				for vID := range outQ {
+					w.inQueue[vID] = append(w.inQueue[vID], outQ[vID]...)
+				}
+			}(nodeID, outQ)
+		} else {
+			workerIP := w.graphReader.ActiveNodes[nodeID].IP
+			outQBytes, _ := json.Marshal(outQ)
+
+			// TODO: send values to correct worker
+			go func() {
+				request, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
+				if err != nil {
+					log.Fatalln(err)
+				}
+			}()
 		}
+
 	}
 }
 
 // reorder messages from vertices into outQueue and activeVertices
 func (w *Worker) readMessage(rm ResultMsg) {
-
 	for dest, m := range rm.msg {
 		if v, ok := w.outQueue[dest]; ok {
 			v = append(v, m)
@@ -139,7 +172,7 @@ func saveStateHandler(w http.ResponseWriter, r *http.Request) {
 	// send back graphReader and In/Out Queue
 
 	// get the get request
-	resp, err := r.Get(getURL(ip, "3000", "saveStateHandler")) 
+	resp, err := r.Get(getURL(ip, "3000", "saveStateHandler"))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -150,13 +183,11 @@ func saveStateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// send back the response here - encoded as json or something
 
-
 }
-
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
 	// read the ping request
-	resp, err := r.Get(getURL(ip, "3000", "pingHandler")) 
+	resp, err := r.Get(getURL(ip, "3000", "pingHandler"))
 
 	if err != nil {
 		log.Fatalln(err)
@@ -165,7 +196,6 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 	resp, err := client.Do(req)
 	w.Write([]byte(http.StatusOK))
 }
-
 
 func Run() {
 	// TODO: gerald
