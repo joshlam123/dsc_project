@@ -135,17 +135,36 @@ func startSuperstepHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func saveStateHandler(w http.ResponseWriter, r *http.Request) {
-	// josh - wrote a file in utilities for you to save anything you want to json file
-	// takes the format: writeToJson(jsonFile interface{}, name string)
-	writeToJson()
+	// takes the format: writeToJson(jsonFile interface{}, name string) from util.go
+	// send back graphReader and In/Out Queue
+
+	// get the get request
+	resp, err := r.Get(getURL(ip, "3000", "saveStateHandler")) 
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// define the format of the response
+
+
+	// send back the response here - encoded as json or something
+
+
 }
 
+
 func pingHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-		case "GET":		
-		// do something here - send back to master - added by josh
+	// read the ping request
+	resp, err := r.Get(getURL(ip, "3000", "pingHandler")) 
+
+	if err != nil {
+		log.Fatalln(err)
 	}
+
+	resp, err := client.Do(req)
+	w.Write([]byte(http.StatusOK))
 }
+
 
 func Run() {
 	// TODO: gerald
