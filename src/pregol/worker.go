@@ -45,7 +45,7 @@ func SetUdf(udf UDF) {
 }
 
 // loadVertices loads assigned vertices received from Master
-func (w *Worker) createAndLoadVertices(gr graphReader) {
+func createAndLoadVertices(gr graphReader) {
 	// create Vertices
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
@@ -56,7 +56,7 @@ func (w *Worker) createAndLoadVertices(gr graphReader) {
 	}
 }
 
-func (w *Worker) startSuperstep() {
+func startSuperstep() {
 	partitions := w.allWorkers[w.ID]
 
 	proxyOut := make(map[int][]float64)
@@ -89,7 +89,7 @@ func (w *Worker) startSuperstep() {
 	w.sendActiveVertices()
 }
 
-func (w *Worker) disseminateMsg() {
+func disseminateMsg() {
 	nodeToOutQ := make(map[int]map[int][]float64)
 
 	for m, n := range w.outQueue {
@@ -137,7 +137,7 @@ func (w *Worker) disseminateMsg() {
 }
 
 // reorder messages from vertices into outQueue and activeVertices
-func (w *Worker) readMessage(rm ResultMsg) {
+func readMessage(rm ResultMsg) {
 	for dest, m := range rm.msg {
 		if v, ok := w.outQueue[dest]; ok {
 			v = append(v, m)
@@ -156,7 +156,7 @@ func (w *Worker) readMessage(rm ResultMsg) {
 
 }
 
-func (w *Worker) sendActiveVertices() {
+func sendActiveVertices() {
 	// TODO: POST req to Master
 }
 
