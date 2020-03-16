@@ -94,17 +94,31 @@ func startSuperstep() {
 }
 
 func disseminateMsgFromOutQ() {
+	// this function is called during startSuperstep() when the worker is disseminating the vertice values 
+
 	nodeToOutQ := make(map[int]map[int][]float64)
 
+	// iterate over the worker's outqueue and prepare to disseminate it to the correct destination verticeID
 	for m, n := range w.outQueue {
+		
+		outQLock.RLock()
+		defer outQLock.RUnlock()
+
 		partID := getPartition(m, w.graphReader.Info.NumPartitions)
 		workerID := w.graphReader.PartitionToNode[partID]
 		nodeToOutQ[workerID][m] = n
 	}
 
+	// set a waitgroup to wait for disseminating to all other workers (incl. yourself)
+	var wg sync.WaitGroup
+
 	for nodeID, outQ := range nodeToOutQ {
+		wg.Add(1)
+
 		if nodeID == w.graphReader.Info.NodeID {
 			// send to own vertices
+
+			// concurrent writes will happen in the inqueue 
 
 			go func(nodeID int, outQ map[int][]float64) {
 				inQLock.Lock()
@@ -113,13 +127,16 @@ func disseminateMsgFromOutQ() {
 				for vID := range outQ {
 					w.inQueue[vID] = append(w.inQueue[vID], outQ[vID]...)
 				}
+
 			}(nodeID, outQ)
+
 		} else {
 			workerIP := w.graphReader.ActiveNodes[nodeID].IP
 			outQBytes, _ := json.Marshal(outQ)
 
 			// TODO: send values to correct worker
 			go func() {
+
 				request, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
 				if err != nil {
 					log.Fatalln(err)
@@ -127,8 +144,9 @@ func disseminateMsgFromOutQ() {
 			}()
 		}
 	}
-	select {}
+	wg.Wait()
 }
+
 
 // Process results from vertices:
 //     a) Populate outQueue with outgoing messages
@@ -220,10 +238,10 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Still not done"))
 	}
 
-	go func() {
-		defer sem.Release(1)
+	else {
+ 		defer sem.Release(1)
 		resp := map[string][]int{
-			"Active Nodes": w.masterResp,
+			"Active Nodes": w.activeVert,
 		}
 		outBytes, error := json.Marshal(resp)
 		if error != nil {
@@ -231,7 +249,7 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Write(outBytes)
-	}()
+	}
 }
 
 // Run ...
