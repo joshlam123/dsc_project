@@ -46,7 +46,13 @@ func initVertices(gr graphReader) {
 	// create Vertices
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
-		v := Vertex{vID, false, vReader.Value, make([]float64, 0), make(chan []float64), make(map[int]float64)}
+		v := Vertex{vID,
+			false,
+			vReader.Value,
+			make([]float64, 0),
+			make(chan []float64),
+			make(map[int]float64),
+			gr.Edges[vID]}
 
 		// add to Worker's partition list
 		w.partToVert[partID][v.Id] = v

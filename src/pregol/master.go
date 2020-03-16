@@ -26,7 +26,7 @@ type Master struct {
 
 type guiSend struct {
 	master Master
-	iter int
+	iter   int
 }
 
 // NewMaster Constructor for Master struct
@@ -99,7 +99,7 @@ func (m *Master) InitConnections() {
 	}
 }
 
-// AssignPartitions Assign partitions to active nodes
+// AssignPartitions Assign partToVert to active nodes
 func (m *Master) AssignPartitions(graphFile string) {
 	g := getGraphFromFile(graphFile)
 	g.PartitionToNode = make(map[int]int)
@@ -207,7 +207,7 @@ func (m *Master) Run() {
 
 		if currentIter%m.checkpoint == 0 {
 			// TODO: Save worker states
-			
+
 			if nodeRevived {
 				m.rollback(checkpointFile)
 				// TODO: Load messages
@@ -291,7 +291,7 @@ func (m *Master) Run() {
 		currentIter++
 
 		// TODO: JOSH send the master condition to GUI
-		guiMsg := guiSend{master:m, iter:currentIter}
+		guiMsg := guiSend{master: m, iter: currentIter}
 		req, err := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer(guiMsg), currentIter)
 	}
 }

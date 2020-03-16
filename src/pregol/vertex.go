@@ -15,7 +15,7 @@ type Vertex struct {
 	InEdges  []float64
 	InMsg    chan []float64
 	outMsg   map[int]float64
-	OutEdges map[int]float64
+	OutEdges []edgeReader
 }
 
 type UDF func(vertex *Vertex, superstep int) (bool, map[int]float64)
