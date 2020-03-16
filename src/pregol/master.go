@@ -217,8 +217,6 @@ func (m *Master) Run() {
 
 		nodeDiedChan := make(chan bool, len(m.activeNodes))
 
-		// endPings := make(chan bool, len(m.nodeAdrs)-len(m.activeNodes))
-
 		var wg sync.WaitGroup
 		for ip, active := range m.nodeAdrs {
 			if active {
@@ -259,15 +257,9 @@ func (m *Master) Run() {
 					}
 
 				}(ip, nodeDiedChan, &wg)
-			} else {
-				// TODO: Ping
-				go func(ip string) {
-
-				}(ip)
 			}
 		}
 
-		//WaitGrp, End Pings
 		wg.Wait()
 		close(nodeDiedChan)
 		for ifNodeDied := range nodeDiedChan {
@@ -275,6 +267,25 @@ func (m *Master) Run() {
 		}
 
 		// Check nodeRevived
+		nodeRevivedChan := make(chan bool, len(m.nodeAdrs)-len(m.activeNodes))
+		for ip, active := range m.nodeAdrs {
+			if !active {
+				wg.Add(1)
+				go func(ip string, wg *sync.WaitGroup) {
+					defer wg.Done()
+					resp, err := m.client.Get(getURL(ip, "3000", "ping"))
+					if err != nil {
+						return
+					}
+					nodeRevivedChan <- true
+				}(ip, &wg)
+			}
+		}
+		wg.Wait()
+		close(nodeRevivedChan)
+		for ifNodeRevived := range nodeRevivedChan {
+			nodeRevived = ifNodeRevived || nodeRevived
+		}
 
 		// TODO: Check end condition
 		currentIter++
