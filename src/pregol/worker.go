@@ -15,9 +15,9 @@ import (
 var w Worker = Worker{}
 var inQLock = sync.RWMutex{}
 var outQLock = sync.RWMutex{}
-var activeVertLock = sync.RWMutex{}               // ensure that one partition access activeVert variable at a time
-var pingPong = semaphore.NewWeighted(int64(1))    // flag: (A) whether superstep is completed; (B) whether initVertices is done
-var busyWorker = sempaphore.NewWeighted(int64(0)) // flag: Check if any goroutines are still handling incoming messages from peer workers
+var activeVertLock = sync.RWMutex{}              // ensure that one partition access activeVert variable at a time
+var pingPong = semaphore.NewWeighted(int64(1))   // flag: (A) whether superstep is completed; (B) whether initVertices is done
+var busyWorker = semaphore.NewWeighted(int64(0)) // flag: Check if any goroutines are still handling incoming messages from peer workers
 
 // Worker ...
 type Worker struct {
