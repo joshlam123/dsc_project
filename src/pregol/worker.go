@@ -29,15 +29,11 @@ type Worker struct {
 	graphReader graphReader
 }
 
-// init Worker
-func InitWorker(id int) Worker {
-	w := Worker{
-		ID:         id,
-		inQueue:    make(map[int][]float64),
-		outQueue:   make(map[int][]float64),
-		partToVert: make(map[int]map[int]Vertex),
-	}
-	return w
+// InitWorker ...
+func InitWorker(id int) {
+	w.inQueue = make(map[int][]float64)
+	w.outQueue = make(map[int][]float64)
+	w.partToVert = make(map[int]map[int]Vertex)
 }
 
 // SetUdf sets the user-defined function for `w`
