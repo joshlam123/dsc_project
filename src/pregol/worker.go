@@ -15,12 +15,13 @@ type Worker struct {
 	//inQueue     []float64 //TODO: do we need to send ID of senderVertex - ID is included in ResultMsg
 	//outQueue    map[int][]float64
 
-	inQueue     []ResultMsg
+	inQueue     map[int][]float64
 	outQueue    map[int][]float64
 	masterResp  string //TODO: change type
 	partitions  map[int][]Vertex
 	udf         UDF
 	graphReader graphReader
+	allWorkers  map[int]Worker
 }
 
 // SetUdf sets the user-defined function for `w`
@@ -33,7 +34,7 @@ func (w *Worker) createAndLoadVertices(gr graphReader) {
 	// create Vertices
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
-		v := Vertex{vID, false, vReader.Value, make([]float64, 0), make(chan []float64), make(map[int]float64)}
+		v := Vertex{vID, false, vReader.Value, make([]float64, 0), make(chan []float64), make(map[int]float64), make(map[int]float64)}
 
 		// add to Worker's partition list
 		if val, ok := w.partitions[partID]; ok {
@@ -42,36 +43,19 @@ func (w *Worker) createAndLoadVertices(gr graphReader) {
 			w.partitions[partID] = []Vertex{v}
 		}
 	}
-
 }
 
 func (w *Worker) startSuperstep() {
-	partitions := w.allWorkers[w]
+	partitions := w.allWorkers[w.ID]
 
-	sendOwn := make(map[int][]float64)
 	proxyOut := make(map[int][]float64)
 
 	for i := range w.inQueue {
-		for j, k := range w.inQueue[i].msg {
-			for l := range w.partitions[w.ID] {
-				if j == w.partitions[w.ID][l].Id {
-					sendOwn[j] = append(sendOwn[j], k)
-				} else {
-					proxyOut[j] = append(proxyOut[j], k)
-				}
-			}
+		for j, k := range w.inQueue[i] {
+			proxyOut[j] = append(proxyOut[j], k)
 		}
 	}
-
-	//send messages in outQueue to own vertices
-	for m, n := range sendOwn {
-		w.partitions[w.ID][m].InMsg <- n //TODO: fix referencing for correct vertex
-	}
-
 	w.outQueue = proxyOut
-	for i := range w.outQueue {
-		// TODO: send vertices to other workers
-	}
 
 	var wg sync.WaitGroup
 	// add waitgroup for each partition: vertex list
@@ -92,7 +76,23 @@ func (w *Worker) startSuperstep() {
 
 	// inform Master that superstep has completed
 	w.sendActiveVertices()
+}
 
+func (w *Worker) disseminateMsg() {
+	for m, n := range w.outQueue {
+		belong := false
+		for o := range w.partitions[w.ID] {
+			if o == m {
+				//send to own vertices directly if they belong in own partition
+				belong = false
+				w.partitions[w.ID][m].InMsg <- n //TODO: fix referencing for correct vertex
+			}
+		}
+		if !belong {
+			// TODO: send values to correct worker
+
+		}
+	}
 }
 
 // reorder messages from vertices into outQueue and activeVertices
@@ -147,7 +147,7 @@ func saveStateHandler(w http.ResponseWriter, r *http.Request) {
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-		case "GET":		
+	case "GET":
 		// do something here - send back to master - added by josh
 	}
 }
