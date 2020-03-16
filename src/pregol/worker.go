@@ -18,7 +18,7 @@ type Worker struct {
 	inQueue     []ResultMsg
 	outQueue    map[int][]float64
 	masterResp  string //TODO: change type
-	partitions  map[int][]Vertex
+	partitions  map[int]map[int]Vertex
 	udf         UDF
 	graphReader graphReader
 }
@@ -36,17 +36,11 @@ func (w *Worker) createAndLoadVertices(gr graphReader) {
 		v := Vertex{vID, false, vReader.Value, make([]float64, 0), make(chan []float64), make(map[int]float64)}
 
 		// add to Worker's partition list
-		if val, ok := w.partitions[partID]; ok {
-			val = append(val, v)
-		} else {
-			w.partitions[partID] = []Vertex{v}
-		}
+		w.partitions[partID][v.Id] = v
 	}
-
 }
 
 func (w *Worker) startSuperstep() {
-	partitions := w.allWorkers[w]
 
 	sendOwn := make(map[int][]float64)
 	proxyOut := make(map[int][]float64)
@@ -82,7 +76,7 @@ func (w *Worker) startSuperstep() {
 			go func() {
 				defer wg.Done()
 				for v := range vList {
-					ret = v.compute(udf, w, superstep)
+					ret := v.compute(udf, w, superstep)
 					w.readMessage(ret)
 				}
 			}()
