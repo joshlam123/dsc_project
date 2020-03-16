@@ -273,7 +273,7 @@ func (m *Master) Run() {
 				wg.Add(1)
 				go func(ip string, wg *sync.WaitGroup) {
 					defer wg.Done()
-					resp, err := m.client.Get(getURL(ip, "3000", "ping"))
+					_, err := m.client.Get(getURL(ip, "3000", "ping"))
 					if err != nil {
 						return
 					}
