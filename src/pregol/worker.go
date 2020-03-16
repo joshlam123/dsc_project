@@ -126,20 +126,28 @@ func disseminateMsgFromOutQ() {
 	select {}
 }
 
-// reorder messages from vertices into outQueue and activeVertices
+// Process results from vertices:
+//     a) Populate outQueue with outgoing messages
+//     b) Populate activeVert with vertices which are active at the end of superstep
+// Requires concurrency controls as each partition will run it's own goroutine and call processVertResult multiple times
 func processVertResult(rm ResultMsg) {
 
-	for dest, m := range rm.msg {
-		if v, ok := w.outQueue[dest]; ok {
-			v = append(v, m)
+	// Populate outQueue with outgoing messages
+	outQLock.Lock()
+	for dstVert, msg := range rm.msg {
+		if msgList, ok := w.outQueue[dstVert]; ok {
+			msgList = append(msgList, msg)
 		} else {
-			w.outQueue[dest] = []float64{m}
+			w.outQueue[dstVert] = []float64{msg}
 		}
 	}
+	outQLock.Unlock()
 
-	// fill list of active vertices to send to Master
+	// Populate activeVert with vertices which are active at the end of superstep
 	if rm.halt == false {
+		activeVertLock.Lock()
 		w.activeVert = append(w.activeVert, rm.sendId)
+		activeVertLock.Unlock()
 	}
 }
 
