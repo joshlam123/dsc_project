@@ -60,17 +60,30 @@ func createAndLoadVertices(gr graphReader) {
 }
 
 func startSuperstep() {
-	proxyOut := make(map[int][]float64)
 
-	for i := range w.inQueue {
-		for j, k := range w.inQueue[i] {
-			proxyOut[j] = append(proxyOut[j], k)
-		}
+	if err := sem.Acquire(ctx, 1); err != nil {
+		log.Printf("Failed to acquire semaphore: %v", err)
+
 	}
-	w.outQueue = proxyOut
+
+	defer sem.Release(1)
+
+	for nodeID, val := range w.inQueue {
+    	w.partitions[w.ID][nodeID].InMsg <- val
+  	}
+
+	// proxyOut := make(map[int][]float64)
+
+	// for i := range w.inQueue {
+	// 	for j, k := range w.inQueue[i] {
+	// 		proxyOut[j] = append(proxyOut[j], k)
+	// 	}
+	// }
+	// w.outQueue = proxyOut
 
 	var wg sync.WaitGroup
 	// add waitgroup for each partition: vertex list
+
 	for _, vList := range w.partitions {
 		wg.Add(1)
 		go func() {
@@ -81,6 +94,7 @@ func startSuperstep() {
 			}
 		}()
 	}
+
 	wg.Wait()
 
 	// inform Master that superstep has completed
@@ -151,20 +165,16 @@ func readMessage(rm ResultMsg) {
 	}
 
 	// fill list of active vertices to send to Master
-	if err := sem.Acquire(ctx, 1); err != nil {
-		log.Printf("Failed to acquire semaphore: %v", err)
-		break
-	}
-
+	
 	go func() {
-		defer sem.Release(1)
-		w.masterResp = activeVertices
+		w.masterResp = append(w.masterResp, activeVertices)
 	}()
 
 }
 
 func sendActiveVertices() {
 	// TODO: POST req to Master
+
 }
 
 func initConnectionHandler(rw http.ResponseWriter, r *http.Request) {
