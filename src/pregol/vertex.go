@@ -20,14 +20,31 @@ type Vertex struct {
 
 type UDF func(vertex *Vertex, superstep int) (bool, map[int]float64)
 
+func (v *Vertex) setInEdge(newVal []float64) {
+	v.InEdges = newVal
+}
+
 func (v *Vertex) Compute(udf UDF, superstep int) ResultMsg {
 	// do computations by iterating over messages from each incoming edge.
-	select {
-	case v.InEdges = <-v.InMsg:
-		v.flag, v.outMsg = udf(v, superstep)
-		return ResultMsg{v.Id, false, v.outMsg}
+	//select {
+	//case v.InEdges = <-v.InMsg:
+	//	v.flag, v.outMsg = udf(v, superstep)
+	//	return ResultMsg{v.Id, false, v.outMsg}
+	//
+	//default:
+	//	if v.flag {
+	//		return v.VoteToHalt()
+	//	} else {
+	//		v.flag, v.outMsg = udf(v, superstep)
+	//		return ResultMsg{v.Id, false, v.outMsg}
+	//	}
+	//}
 
-	default:
+	if v.InEdges != nil {
+		v.flag, v.outMsg = udf(v, superstep)
+		v.InEdges = nil
+		return ResultMsg{v.Id, false, v.outMsg}
+	} else {
 		if v.flag {
 			return v.VoteToHalt()
 		} else {

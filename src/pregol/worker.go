@@ -44,6 +44,12 @@ func SetUdf(udf UDF) {
 // loadVertices loads assigned vertices received from Master
 func initVertices(gr graphReader) {
 	// create Vertices
+
+	if err := pingPong.Acquire(ctx, 1); err != nil {
+		log.Printf("Failed to acquire semaphore: %v", err)
+	}
+	defer pingPong.Release(1)
+
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
 		v := Vertex{vID,
@@ -61,15 +67,15 @@ func initVertices(gr graphReader) {
 
 func startSuperstep() {
 
-	if err := sem.Acquire(ctx, 1); err != nil {
+	if err := pingPong.Acquire(ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
 	}
 
-	defer sem.Release(1)
+	defer pingPong.Release(1)
 
 	// sending values to vertices through InMsg Channel
-	for nodeID, val := range w.inQueue {
-		w.partToVert[w.ID][nodeID].InMsg <- val
+	for vID, val := range w.inQueue {
+		w.partToVert[w.ID][vID].setInEdge(val)
 	}
 
 	var wg sync.WaitGroup
