@@ -18,10 +18,9 @@ type Worker struct {
 	inQueue     map[int][]float64
 	outQueue    map[int][]float64
 	masterResp  string //TODO: change type
-	partitions  map[int][]Vertex
+	partitions  map[int]map[int]Vertex
 	udf         UDF
 	graphReader graphReader
-	allWorkers  map[int]Worker
 }
 
 // SetUdf sets the user-defined function for `w`
@@ -34,14 +33,10 @@ func (w *Worker) createAndLoadVertices(gr graphReader) {
 	// create Vertices
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
-		v := Vertex{vID, false, vReader.Value, make([]float64, 0), make(chan []float64), make(map[int]float64), make(map[int]float64)}
+		v := Vertex{vID, false, vReader.Value, make([]float64, 0), make(chan []float64), make(map[int]float64)}
 
 		// add to Worker's partition list
-		if val, ok := w.partitions[partID]; ok {
-			val = append(val, v)
-		} else {
-			w.partitions[partID] = []Vertex{v}
-		}
+		w.partitions[partID][v.Id] = v
 	}
 }
 
@@ -66,7 +61,7 @@ func (w *Worker) startSuperstep() {
 			go func() {
 				defer wg.Done()
 				for v := range vList {
-					ret = v.compute(udf, w, superstep)
+					ret := v.compute(udf, w, superstep)
 					w.readMessage(ret)
 				}
 			}()
@@ -147,7 +142,7 @@ func saveStateHandler(w http.ResponseWriter, r *http.Request) {
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case "GET":
+		case "GET":		
 		// do something here - send back to master - added by josh
 	}
 }
