@@ -76,22 +76,20 @@ func startSuperstep() {
 	}
 
 	var wg sync.WaitGroup
-	// add waitgroup for each partition: vertex list
 
 	for _, vList := range w.partToVert {
-		wg.Add(1)
-		go func() {
+		wg.Add(1)									// add waitgroup for each partition: vertex list
+		go func() {										// for each partition, launch go routine to call compute for each of its vertex
 			defer wg.Done()
-			for vID, v := range vList {
+			for _, v := range vList {					// for each vertex in partition, compute().
 				resultmsg := v.Compute(w.udf, superstep) //TODO: get superstep number
-				// TODO: call processVertResult(ret)
-				processVertResult(resultmsg)
-
+				processVertResult(resultmsg)			//populate outQueue with return value of compute()
 			}
 		}()
 	}
-
 	wg.Wait()
+
+	disseminateMsgFromOutQ()							// send values to inqueue of respective worker nodes
 }
 
 func disseminateMsgFromOutQ() {
@@ -152,9 +150,8 @@ func disseminateMsgFromOutQ() {
 // Process results from vertices:
 //     a) Populate outQueue with outgoing messages
 //     b) Populate activeVert with vertices which are active at the end of superstep
-// Requires concurrency controls as each partition will run it's own goroutine and call processVertResult multiple times
+// Requires concurrency controls as each partition will run its own goroutine and call processVertResult multiple times
 func processVertResult(rm ResultMsg) {
-
 	// Populate outQueue with outgoing messages
 	outQLock.Lock()
 	for dstVert, msg := range rm.msg {
