@@ -291,7 +291,7 @@ func (m *Master) Run() {
 		currentIter++
 
 		// TODO: JOSH send the master condition to GUI
-		guiMsg := guiSend{master: m, iter: currentIter}
-		req, err := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer(guiMsg), currentIter)
+		//guiMsg := guiSend{master: m, iter: currentIter}
+		//req, err := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer(guiMsg), currentIter)
 	}
 }
