@@ -89,8 +89,8 @@ func startSuperstep() {
 		go func() { // for each partition, launch go routine to call compute for each of its vertex
 			defer wg.Done()
 			for _, v := range vList { // for each vertex in partition, compute().
-				resultmsg := v.Compute(w.udf, superstep) //TODO: get superstep number
-				processVertResult(resultmsg)             //populate outQueue with return value of compute()
+				resultmsg := v.Compute(w.udf, 1) //TODO: get superstep number
+				processVertResult(resultmsg)     //populate outQueue with return value of compute()
 			}
 		}()
 	}
@@ -140,7 +140,7 @@ func disseminateMsgFromOutQ() {
 
 			// send values to correct worker
 			go func() {
-				request, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
+				_, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
 				if err != nil {
 					log.Fatalln(err)
 				}
@@ -244,41 +244,46 @@ func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 
 func pingHandler(rw http.ResponseWriter, r *http.Request) {
 	// read the ping request
-	resp, err := r.Get(getURL(ip, "3000", "pingHandler"))
+	bodyByte, _ := ioutil.ReadAll(r.Body)
+	bodyString := string(bodyByte)
 
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	// lock when accessing masterResponse
-	// if unable to access semaphore, send "still not done" to master
-	if err := pingPong.TryAcquire(1); err != nil {
-		log.Printf("Failed to acquire semaphore: %v", err)
-		w.Write([]byte("Still not done"))
-	} else {
-
-		defer pingPong.Release(1)
-
-		if err := busyWorker.TryAcquire(1); err != nil {
-
+	if bodyString == "Completed graphHandler?" {
+		if pingPong.TryAcquire(1) == false {
+			log.Printf("Failed to acquire semaphore")
+			//rw.Write([]byte("Still not done"))
+			fmt.Fprintf(rw, "still not done")
+		} else {
+			defer pingPong.Release(1)
+			fmt.Fprintf(rw, "done")
+		}
+	} else if bodyString == "Completed Superstep?" {
+		// lock when accessing masterResponse
+		// if unable to access semaphore, send "still not done" to master
+		if pingPong.TryAcquire(1) == false {
+			log.Printf("Failed to acquire semaphore")
+			//rw.Write([]byte("Still not done"))
+			fmt.Fprintf(rw, "still not done")
 		} else {
 
-			defer busyWorker.Release(1)
+			defer pingPong.Release(1)
 
-			resp := map[string][]int{
-				"Active Nodes": w.activeVert,
+			if busyWorker.TryAcquire(1) == false {
+
+			} else {
+				defer busyWorker.Release(1)
+				//resp := map[string][]int{
+				//	"Active Nodes": w.activeVert,
+				//}
+
+				outBytes, error := json.Marshal(w.activeVert)
+
+				if error != nil {
+					http.Error(rw, error.Error(), http.StatusInternalServerError)
+					return
+				}
+				rw.Write(outBytes)
 			}
-
-			outBytes, error := json.Marshal(resp)
-
-			if error != nil {
-				http.Error(w, error.Error(), http.StatusInternalServerError)
-				return
-			}
-			w.Write(outBytes)
-
 		}
-
 	}
 }
 
