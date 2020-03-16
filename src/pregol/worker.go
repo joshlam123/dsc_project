@@ -249,23 +249,37 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	// lock when accessing masterResponse
-	// if unable to access semaphore, send "still not done"
-	if err := pingPong.Acquire(ctx, 1); err != nil {
+	// if unable to access semaphore, send "still not done" to master
+	if err := pingPong.TryAcquire(1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
 		w.Write([]byte("Still not done"))
 	} else {
+
 		defer pingPong.Release(1)
-		resp := map[string][]int{
-			"Active Nodes": w.activeVert,
-		}
-		outBytes, error := json.Marshal(resp)
-		if error != nil {
-			http.Error(w, error.Error(), http.StatusInternalServerError)
+
+		if err := busyWorker.TryAcquire(1); err != nil {
+
+		} else {
+			
+			defer busyWorker.Release(1)
+
+			resp := map[string][]int{
+				"Active Nodes": w.activeVert,
+			}
+
+			outBytes, error := json.Marshal(resp)
+
+			if error != nil {
+				http.Error(w, error.Error(), http.StatusInternalServerError)
 			return
+			}
+			w.Write(outBytes)
+
 		}
-		w.Write(outBytes)
+
 	}
 }
+
 
 // Run ...
 func Run() {
