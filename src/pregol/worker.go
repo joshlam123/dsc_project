@@ -57,7 +57,6 @@ func createAndLoadVertices(gr graphReader) {
 }
 
 func startSuperstep() {
-	partitions := w.allWorkers[w.ID]
 
 	proxyOut := make(map[int][]float64)
 
@@ -70,19 +69,19 @@ func startSuperstep() {
 
 	var wg sync.WaitGroup
 	// add waitgroup for each partition: vertex list
-	for range w.partitions {
-		wg.Add(1)
+	// partitions  map[int]map[int]Vertex
 
-		for _, vList := range w.partitions {
-			go func() {
-				defer wg.Done()
-				for v := range vList {
-					ret := v.compute(w.udf, w, superstep)
-					w.readMessage(ret)
-				}
-			}()
-		}
+	for _, vList := range w.partitions {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for vID, v := range vList {
+				ret := v.Compute(w.udf, superstep) //TODO: get superstep number
+				// TODO: call readMessage(ret)
+			}
+		}()
 	}
+
 	wg.Wait()
 
 	// inform Master that superstep has completed
