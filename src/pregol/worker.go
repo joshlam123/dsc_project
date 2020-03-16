@@ -15,8 +15,9 @@ import (
 var w Worker = Worker{}
 var inQLock = sync.RWMutex{}
 var outQLock = sync.RWMutex{}
-var activeVertLock = sync.RWMutex{}            // ensure that one partition access activeVert variable at a time
-var pingPong = semaphore.NewWeighted(int64(1)) // flag: (A) whether superstep is completed; (B) whether initVertices is done
+var activeVertLock = sync.RWMutex{}               // ensure that one partition access activeVert variable at a time
+var pingPong = semaphore.NewWeighted(int64(1))    // flag: (A) whether superstep is completed; (B) whether initVertices is done
+var busyWorker = sempaphore.NewWeighted(int64(0)) // flag: Check if any goroutines are still handling incoming messages from peer workers
 
 // Worker ...
 type Worker struct {
@@ -193,16 +194,20 @@ func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 	go initVertices(gr)
 }
 
-func workerToWorkerHandler() {
-
-}
-
 func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 	if err := pingPong.Acquire(ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
 	}
+func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
+	// map[int][]float64
+	defer close(r.Body)
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	err != nil{
+		// do something
+	}
+	var dstToVals map[int][]float64
+	json.Unmarshal(bodyBytes, dstToVals)
 
-	fmt.Fprintf(rw, "startedSuperstep")
 }
 
 func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
@@ -210,14 +215,8 @@ func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 	// send back graphReader and In/Out Queue
 
 	// get the get request
-	resp, err := r.Get(getURL(ip, "3000", "saveStateHandler"))
-	if err != nil {
-		log.Fatalln(err)
-	}
 
 	// define the format of the response
-	w.graphReader
-	w.partToVert
 
 	// send back the response here - encoded as json or something
 
@@ -259,6 +258,7 @@ func Run() {
 	http.HandleFunc("/disseminateGraph", disseminateGraphHandler)
 	http.HandleFunc("/startSuperstep", startSuperstepHandler)
 	http.HandleFunc("/saveState", saveStateHandler)
+	http.HandleFunc("/incomingMsg", workerToWorkerHandler)
 	http.HandleFunc("/ping", pingHandler)
 	http.ListenAndServe(":3000", nil)
 }
