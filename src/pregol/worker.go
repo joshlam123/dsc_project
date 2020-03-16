@@ -75,20 +75,24 @@ func startSuperstep() {
 		w.partToVert[w.ID][vID].setInEdge(val)
 	}
 
-	var wg sync.WaitGroup
+	// clearing queues so new values are not appended to old values (refresh for fresh superStep)
+	// same for activeVert
+	w.inQueue = make(map[int][]float64)
+	w.outQueue = make(map[int][]float64)
+	w.activeVert = make([]int, 0)
 
+	var wg sync.WaitGroup
 	for _, vList := range w.partToVert {
-		wg.Add(1)   // add waitgroup for each partition: vertex list
-		go func() { // for each partition, launch go routine to call compute for each of its vertex
+		wg.Add(1)   									// add waitGroup for each partition: vertex list
+		go func() { 										// for each partition, launch go routine to call compute for each of its vertex
 			defer wg.Done()
 			for _, v := range vList { // for each vertex in partition, compute().
-				resultmsg := v.Compute(w.udf, superstep) //TODO: get superstep number
-				processVertResult(resultmsg)             //populate outQueue with return value of compute()
+				resultmsg := v.Compute(w.udf, superstep) 	//TODO: get superstep number
+				processVertResult(resultmsg)             	//populate outQueue with return value of compute()
 			}
 		}()
 	}
 	wg.Wait()
-
 	disseminateMsgFromOutQ() // send values to inqueue of respective worker nodes
 }
 
@@ -97,7 +101,7 @@ func disseminateMsgFromOutQ() {
 
 	nodeToOutQ := make(map[int]map[int][]float64)
 
-	// iterate over the worker's outqueue and prepare to disseminate it to the correct destination verticeID
+	// iterate over the worker's outqueue and prepare to disseminate it to the correct destination vertexID
 	for m, n := range w.outQueue {
 
 		outQLock.RLock()
@@ -118,7 +122,6 @@ func disseminateMsgFromOutQ() {
 			// send to own vertices
 
 			// concurrent writes will happen in the inqueue
-
 			go func(nodeID int, outQ map[int][]float64) {
 				inQLock.Lock()
 				defer inQLock.Unlock()
@@ -133,9 +136,8 @@ func disseminateMsgFromOutQ() {
 			workerIP := w.graphReader.ActiveNodes[nodeID].IP
 			outQBytes, _ := json.Marshal(outQ)
 
-			// TODO: send values to correct worker
+			// send values to correct worker
 			go func() {
-
 				request, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
 				if err != nil {
 					log.Fatalln(err)
