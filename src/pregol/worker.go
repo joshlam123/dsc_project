@@ -187,9 +187,9 @@ func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 
 	// get graph
 	gr := getGraphFromJSONByte(bodyBytes)
-	w.graphReader = gr
+	w.graphReader = *gr
 
-	go initVertices(gr)
+	go initVertices(*gr)
 
 	if err := pingPong.Acquire(ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
@@ -203,8 +203,8 @@ func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 	if err := pingPong.Acquire(ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
-		} else {
-			fmt.Fprintf(rw, "startedSuperstep")
+	} else {
+		fmt.Fprintf(rw, "startedSuperstep")
 	}
 }
 
