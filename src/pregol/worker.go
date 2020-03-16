@@ -74,7 +74,7 @@ func startSuperstep() {
 
 	// sending values to vertices through InMsg Channel
 	for vID, val := range w.inQueue {
-		w.partToVert[w.ID][vID].setInEdge(val)
+		(&w.partToVert[w.ID][vID]).SetInEdge(val)
 	}
 
 	// clearing queues so new values are not appended to old values (refresh for fresh superStep)

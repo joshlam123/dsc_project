@@ -20,7 +20,7 @@ type Vertex struct {
 
 type UDF func(vertex *Vertex, superstep int) (bool, map[int]float64)
 
-func (v *Vertex) setInEdge(newVal []float64) {
+func (v *Vertex) SetInEdge(newVal []float64) {
 	v.InEdges = append(v.InEdges, newVal...)
 }
 
