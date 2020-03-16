@@ -1,15 +1,15 @@
 package main
 
 import (
-	"fmt"
-	"pregol"
+	"../src/pregol"
 )
 
 func main() {
-	pregol.SetUdf(func(vertex *Vertex, superstep int) (bool, map[int]float64) {
+	pregol.InitWorker()
+	pregol.SetUdf(func(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 		// Do smth
 
-		return (false, make(map[int]float64))
+		return false, make(map[int]float64)
 	})
 	pregol.Run()
 	select {}

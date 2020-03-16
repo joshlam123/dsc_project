@@ -33,7 +33,7 @@ type Worker struct {
 }
 
 // InitWorker ...
-func InitWorker(id int) {
+func InitWorker() {
 	w.inQueue = make(map[int][]float64)
 	w.outQueue = make(map[int][]float64)
 	w.partToVert = make(map[int]map[int]Vertex)
