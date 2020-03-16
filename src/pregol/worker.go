@@ -2,6 +2,7 @@ package pregol
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +13,7 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
+var ctx = context.Background()
 var w Worker = Worker{}
 var inQLock = sync.RWMutex{}
 var outQLock = sync.RWMutex{}
@@ -219,7 +221,7 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 	json.Unmarshal(bodyBytes, &dstToVals)
 	busyWorker.Release(1)
 	go func(dstToVals map[int][]float64) {
-		defer busyWorker.Acquire(1)
+		defer busyWorker.Acquire(ctx, 1)
 		inQLock.Lock()
 		defer inQLock.Unlock()
 		for dst, vals := range dstToVals {
@@ -260,7 +262,7 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 		if err := busyWorker.TryAcquire(1); err != nil {
 
 		} else {
-			
+
 			defer busyWorker.Release(1)
 
 			resp := map[string][]int{
@@ -271,7 +273,7 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 
 			if error != nil {
 				http.Error(w, error.Error(), http.StatusInternalServerError)
-			return
+				return
 			}
 			w.Write(outBytes)
 
@@ -279,7 +281,6 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 
 	}
 }
-
 
 // Run ...
 func Run() {
