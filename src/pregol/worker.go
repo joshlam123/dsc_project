@@ -8,10 +8,13 @@ import (
 	"log"
 	"net/http"
 	"sync"
+
+	"golang.org/x/sync/semaphore"
 )
 
 var w Worker = Worker{}
 var inChanLock = sync.RWMutex{}
+var semMaster = semaphore.NewWeighted(int64(1))
 
 // Worker ...
 type Worker struct {
@@ -21,7 +24,7 @@ type Worker struct {
 
 	inQueue     map[int][]float64
 	outQueue    map[int][]float64
-	masterResp  string                 //TODO: change type
+	masterResp  []int                  //TODO: change type
 	partitions  map[int]map[int]Vertex // partId: {verticeID: Vertex}
 	udf         UDF
 	graphReader graphReader
@@ -57,7 +60,6 @@ func createAndLoadVertices(gr graphReader) {
 }
 
 func startSuperstep() {
-
 	proxyOut := make(map[int][]float64)
 
 	for i := range w.inQueue {
@@ -69,8 +71,6 @@ func startSuperstep() {
 
 	var wg sync.WaitGroup
 	// add waitgroup for each partition: vertex list
-	// partitions  map[int]map[int]Vertex
-
 	for _, vList := range w.partitions {
 		wg.Add(1)
 		go func() {
@@ -81,7 +81,6 @@ func startSuperstep() {
 			}
 		}()
 	}
-
 	wg.Wait()
 
 	// inform Master that superstep has completed
@@ -137,6 +136,7 @@ func disseminateMsg() {
 
 // reorder messages from vertices into outQueue and activeVertices
 func readMessage(rm ResultMsg) {
+
 	for dest, m := range rm.msg {
 		if v, ok := w.outQueue[dest]; ok {
 			v = append(v, m)
@@ -151,7 +151,15 @@ func readMessage(rm ResultMsg) {
 	}
 
 	// fill list of active vertices to send to Master
-	w.masterResp = activeVertices
+	if err := sem.Acquire(ctx, 1); err != nil {
+		log.Printf("Failed to acquire semaphore: %v", err)
+		break
+	}
+
+	go func() {
+		defer sem.Release(1)
+		w.masterResp = activeVertices
+	}()
 
 }
 
@@ -160,11 +168,11 @@ func sendActiveVertices() {
 }
 
 func initConnectionHandler(rw http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "connected")
+	fmt.Fprintf(rw, "connected")
 }
 
 func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "received")
+	fmt.Fprintf(rw, "received")
 	bodyBytes, err := ioutil.ReadAll(r.Body) //arr of bytes
 	if err != nil {
 		panic(err)
@@ -179,10 +187,10 @@ func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 
 func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 
-	fmt.Fprintf(w, "startedSuperstep")
+	fmt.Fprintf(rw, "startedSuperstep")
 }
 
-func saveStateHandler(w http.ResponseWriter, r *http.Request) {
+func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 	// takes the format: writeToJson(jsonFile interface{}, name string) from util.go
 	// send back graphReader and In/Out Queue
 
@@ -200,7 +208,7 @@ func saveStateHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func pingHandler(w http.ResponseWriter, r *http.Request) {
+func pingHandler(rw http.ResponseWriter, r *http.Request) {
 	// read the ping request
 	resp, err := r.Get(getURL(ip, "3000", "pingHandler"))
 
@@ -208,8 +216,25 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalln(err)
 	}
 
-	resp, err := client.Do(req)
-	w.Write([]byte(http.StatusOK))
+	// lock when accessing masterResponse
+	// if unable to access semaphore, send "still not done"
+	if err := sem.Acquire(ctx, 1); err != nil {
+		log.Printf("Failed to acquire semaphore: %v", err)
+		w.Write([]byte("Still not done"))
+	}
+
+	go func() {
+		defer sem.Release(1)
+		resp := map[string][]int{
+			"Active Nodes": w.masterResp,
+		}
+		outBytes, error := json.Marshal(resp)
+		if error != nil {
+			http.Error(w, error.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(outBytes)
+	}()
 }
 
 // Run ...
@@ -220,7 +245,5 @@ func Run() {
 	http.HandleFunc("/startSuperstep", disseminateGraphHandler)
 	http.HandleFunc("/saveState", saveStateHandler)
 	http.HandleFunc("/ping", pingHandler)
-	// added by josh for GUI
-	http.HandleFunc("/gui", pingHandler)
 	http.ListenAndServe(":3000", nil)
 }
