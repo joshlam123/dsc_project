@@ -78,28 +78,28 @@ func startSuperstep() {
 	var wg sync.WaitGroup
 
 	for _, vList := range w.partToVert {
-		wg.Add(1)									// add waitgroup for each partition: vertex list
-		go func() {										// for each partition, launch go routine to call compute for each of its vertex
+		wg.Add(1)   // add waitgroup for each partition: vertex list
+		go func() { // for each partition, launch go routine to call compute for each of its vertex
 			defer wg.Done()
-			for _, v := range vList {					// for each vertex in partition, compute().
+			for _, v := range vList { // for each vertex in partition, compute().
 				resultmsg := v.Compute(w.udf, superstep) //TODO: get superstep number
-				processVertResult(resultmsg)			//populate outQueue with return value of compute()
+				processVertResult(resultmsg)             //populate outQueue with return value of compute()
 			}
 		}()
 	}
 	wg.Wait()
 
-	disseminateMsgFromOutQ()							// send values to inqueue of respective worker nodes
+	disseminateMsgFromOutQ() // send values to inqueue of respective worker nodes
 }
 
 func disseminateMsgFromOutQ() {
-	// this function is called during startSuperstep() when the worker is disseminating the vertice values 
+	// this function is called during startSuperstep() when the worker is disseminating the vertice values
 
 	nodeToOutQ := make(map[int]map[int][]float64)
 
 	// iterate over the worker's outqueue and prepare to disseminate it to the correct destination verticeID
 	for m, n := range w.outQueue {
-		
+
 		outQLock.RLock()
 		defer outQLock.RUnlock()
 
@@ -117,7 +117,7 @@ func disseminateMsgFromOutQ() {
 		if nodeID == w.graphReader.Info.NodeID {
 			// send to own vertices
 
-			// concurrent writes will happen in the inqueue 
+			// concurrent writes will happen in the inqueue
 
 			go func(nodeID int, outQ map[int][]float64) {
 				inQLock.Lock()
@@ -145,7 +145,6 @@ func disseminateMsgFromOutQ() {
 	}
 	wg.Wait()
 }
-
 
 // Process results from vertices:
 //     a) Populate outQueue with outgoing messages
@@ -195,11 +194,13 @@ func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 	if err := pingPong.Acquire(ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
 	}
+}
+
 func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 	// map[int][]float64
 	defer close(r.Body)
 	bodyBytes, err := ioutil.ReadAll(r.Body)
-	err != nil{
+	if err != nil {
 		// do something
 	}
 	var dstToVals map[int][]float64
@@ -232,10 +233,8 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 	if err := sem.Acquire(ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
 		w.Write([]byte("Still not done"))
-	}
-
-	else {
- 		defer sem.Release(1)
+	} else {
+		defer sem.Release(1)
 		resp := map[string][]int{
 			"Active Nodes": w.activeVert,
 		}
