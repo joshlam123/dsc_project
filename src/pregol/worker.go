@@ -188,11 +188,22 @@ func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 	w.graphReader = gr
 
 	go initVertices(gr)
+
+	if err := pingPong.Acquire(ctx, 1); err != nil {
+		log.Printf("Failed to acquire semaphore: %v", err)
+		fmt.Fprintf(rw, "NOT OK")
+	}
+	} else {
+		defer pingPong.Release(1)
+		fmt.Fprintf(rw, "OK")
+	}
 }
 
 func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 	if err := pingPong.Acquire(ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
+	} else {
+		fmt.Fprintf(rw, "startedSuperstep")
 	}
 }
 
@@ -230,11 +241,11 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 
 	// lock when accessing masterResponse
 	// if unable to access semaphore, send "still not done"
-	if err := sem.Acquire(ctx, 1); err != nil {
+	if err := pingPong.Acquire(ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
 		w.Write([]byte("Still not done"))
 	} else {
-		defer sem.Release(1)
+		defer pingPong.Release(1)
 		resp := map[string][]int{
 			"Active Nodes": w.activeVert,
 		}
