@@ -26,8 +26,8 @@ type Worker struct {
 	ID          int
 	inQueue     map[int][]float64
 	outQueue    map[int][]float64
-	activeVert  []int                  //TODO: change type
-	partToVert  map[int]map[int]Vertex // partId: {verticeID: Vertex}
+	activeVert  []int                   //TODO: change type
+	partToVert  map[int]map[int]*Vertex // partId: {verticeID: Vertex}
 	udf         UDF
 	graphReader graphReader
 }
@@ -74,7 +74,7 @@ func startSuperstep() {
 
 	// sending values to vertices through InMsg Channel
 	for vID, val := range w.inQueue {
-		(&w.partToVert[w.ID][vID]).SetInEdge(val)
+		w.partToVert[w.ID][vID].SetInEdge(val)
 	}
 
 	// clearing queues so new values are not appended to old values (refresh for fresh superStep)
