@@ -123,6 +123,7 @@ func disseminateMsg() {
 	}
 
 	for nodeID, outQ := range nodeToOutQ {
+
 		if nodeID == w.graphReader.Info.NodeID {
 			// send to own vertices
 
@@ -139,13 +140,15 @@ func disseminateMsg() {
 			outQBytes, _ := json.Marshal(outQ)
 
 			// TODO: send values to correct worker
-			go func(workerIP string, outQBytes []byte) {
-				// TODO: Add timeout and timeout handlers
-				http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
-			}(workerIP, outQBytes)
+			go func() {
+				request, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
+				if err != nil {
+					log.Fatalln(err)
+				}
+			}()
 		}
+
 	}
-	select {}
 }
 
 // reorder messages from vertices into outQueue and activeVertices
@@ -187,8 +190,8 @@ func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	// bodyString := string(bodyBytes)
-	// fmt.Println(bodyString)
+	bodyString := string(bodyBytes)
+	fmt.Println(bodyString)
 
 	// get graph
 	gr := getGraphFromJSONByte(bodyBytes)
