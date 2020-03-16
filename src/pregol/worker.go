@@ -203,8 +203,8 @@ func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 	if err := pingPong.Acquire(ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
-	} else {
-		fmt.Fprintf(rw, "startedSuperstep")
+		} else {
+			fmt.Fprintf(rw, "startedSuperstep")
 	}
 }
 
@@ -216,8 +216,16 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 		// do something
 	}
 	var dstToVals map[int][]float64
-	json.Unmarshal(bodyBytes, dstToVals)
-
+	json.Unmarshal(bodyBytes, &dstToVals)
+	busyWorker.Release(1)
+	go func(dstToVals map[int][]float64) {
+		defer busyWorker.Acquire(1)
+		inQLock.Lock()
+		defer inQLock.Unlock()
+		for dst, vals := range dstToVals {
+			w.inQueue[dst] = append(w.inQueue[dst], vals...)
+		}
+	}(dstToVals)
 }
 
 func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
