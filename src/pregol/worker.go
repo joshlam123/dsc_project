@@ -21,10 +21,22 @@ type Worker struct {
 
 	inQueue     map[int][]float64
 	outQueue    map[int][]float64
-	masterResp  string //TODO: change type
-	partitions  map[int]map[int]Vertex
+	masterResp  string                 //TODO: change type
+	partitions  map[int]map[int]Vertex // partId: {verticeID: Vertex}
 	udf         UDF
 	graphReader graphReader
+}
+
+// init Worker
+func initWorker(id int) Worker {
+
+	w := Worker{
+		ID:         id,
+		inQueue:    make(map[int][]float64),
+		outQueue:   make(map[int][]float64),
+		partitions: make(map[int]map[int]Vertex),
+	}
+	return w
 }
 
 // SetUdf sets the user-defined function for `w`
@@ -58,14 +70,14 @@ func (w *Worker) startSuperstep() {
 
 	var wg sync.WaitGroup
 	// add waitgroup for each partition: vertex list
-	for range partitions {
+	for range w.partitions {
 		wg.Add(1)
 
-		for _, vList := range partitions {
+		for _, vList := range w.partitions {
 			go func() {
 				defer wg.Done()
 				for v := range vList {
-					ret := v.compute(udf, w, superstep)
+					ret := v.compute(w.udf, w, superstep)
 					w.readMessage(ret)
 				}
 			}()
@@ -139,7 +151,7 @@ func (w *Worker) readMessage(rm ResultMsg) {
 		activeVertices = append(activeVertices, rm.sendId)
 	}
 
-	// send list/number to Master
+	// fill list of active vertices to send to Master
 	w.masterResp = activeVertices
 
 }
@@ -148,22 +160,26 @@ func (w *Worker) sendActiveVertices() {
 	// TODO: POST req to Master
 }
 
-func initConnectionHandler(w http.ResponseWriter, r *http.Request) {
+func initConnectionHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "connected")
 }
 
-func disseminateGraphHandler(w http.ResponseWriter, r *http.Request) {
+func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "received")
-	bodyBytes, err := ioutil.ReadAll(r.Body)
+	bodyBytes, err := ioutil.ReadAll(r.Body) //arr of bytes
 	if err != nil {
 		panic(err)
 	}
 	bodyString := string(bodyBytes)
 	fmt.Println(bodyString)
-	// Handle Graph here
+
+	// get graph
+	gr := getGraphFromJSONByte(bodyBytes)
+	go w.createAndLoadVertices(gr)
 }
 
-func startSuperstepHandler(w http.ResponseWriter, r *http.Request) {
+func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
+
 	fmt.Fprintf(w, "startedSuperstep")
 }
 
@@ -197,6 +213,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(http.StatusOK))
 }
 
+// Run ...
 func Run() {
 	// TODO: gerald
 	http.HandleFunc("/initConnection", initConnectionHandler)
