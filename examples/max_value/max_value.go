@@ -1,14 +1,15 @@
 package main
 
 import (
-	"../../src/pregol"
 	"fmt"
+
+	"../../src/pregol"
 )
 
 // MaxValue represents the Pregel program for finding the max value among all vertices
 func MaxValue(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 	fmt.Println("At superstep: ", superstep)
-	var msgs map[int]float64
+	msgs := make(map[int]float64)
 	// algorithm:
 	// 1. take max(value, incomingValues...)
 	newMax := false
