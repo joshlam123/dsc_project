@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -77,12 +76,12 @@ func (m *Master) InitConnections() {
 				fmt.Println("Machine", ip, "connected.")
 				activeNodeChan <- activeNode{ip, make([]int, 0)}
 
-				bodyBytes, err := ioutil.ReadAll(resp.Body)
-				if err != nil {
-					log.Fatal(err)
-				}
-				bodyString := string(bodyBytes)
-				fmt.Println(bodyString)
+				// bodyBytes, err := ioutil.ReadAll(resp.Body)
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
+				// bodyString := string(bodyBytes)
+				// fmt.Println(bodyString)
 			}
 		}(ip, &wg, activeNodeChan)
 
@@ -156,12 +155,12 @@ func (m *Master) DisseminateGraph() {
 			if resp.StatusCode == http.StatusOK {
 				fmt.Println("Machine", ip, "received graph.")
 
-				bodyBytes, err := ioutil.ReadAll(resp.Body)
-				if err != nil {
-					log.Fatal(err)
-				}
-				bodyString := string(bodyBytes)
-				fmt.Println(bodyString)
+				// bodyBytes, err := ioutil.ReadAll(resp.Body)
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
+				// bodyString := string(bodyBytes)
+				// fmt.Println(bodyString)
 			}
 		}(aNode.IP, &wg, m.graphsToNodes[idx])
 	}
@@ -216,104 +215,105 @@ func (m *Master) Run() {
 			// 		nodeRevived = false
 			// 	}
 			// }
-
-			nodeDiedChan := make(chan bool, len(m.activeNodes))
-			inactiveChan := make(chan bool, len(m.activeNodes))
-
-			var wg sync.WaitGroup
-			for ip, active := range m.nodeAdrs {
-				if active {
-					wg.Add(1)
-					go func(ip string, nodeDiedChan, inactiveChan chan bool, wg *sync.WaitGroup) {
-						// TODO: Start superstep
-						defer wg.Done()
-
-						resp, err := m.client.Get(getURL(ip, "3000", "startSuperstep"))
-						if err != nil {
-							nodeDiedChan <- true
-							return
-						}
-
-						if resp.StatusCode != http.StatusOK {
-							nodeDiedChan <- true
-							return
-						}
-
-						// Start pinging
-						for {
-							// pingResp, err2 := m.client.Get(getURL(ip, "3000", "ping"))
-							req, _ := http.NewRequest("POST", getURL(ip, "3000", "ping"), bytes.NewBuffer([]byte("Completed Superstep?")))
-							pingResp, err2 := m.client.Do(req)
-							if err2 != nil {
-								nodeDiedChan <- true
-								return
-							}
-
-							if pingResp.StatusCode != http.StatusOK {
-								nodeDiedChan <- true
-								return
-							}
-
-							bodyBytes, _ := ioutil.ReadAll(resp.Body)
-							result := string(bodyBytes)
-							if result != "still not done" {
-								var activeVert []int
-								json.Unmarshal(bodyBytes, &activeVert)
-								if len(activeVert) == 0 {
-									inactiveChan <- true
-								} else {
-									inactiveChan <- false
-								}
-							}
-							time.Sleep(time.Second * 10)
-						}
-					}(ip, nodeDiedChan, inactiveChan, &wg)
-				}
-			}
-
-			wg.Wait()
-			close(nodeDiedChan)
-			for ifNodeDied := range nodeDiedChan {
-				nodeDied = ifNodeDied || nodeDied
-			}
-
-			allInactive := true
-			for ifAllInactive := range inactiveChan {
-				allInactive = allInactive && ifAllInactive
-			}
-			if allInactive {
-				fmt.Println("Computation has completed.")
-				break
-			}
-
-			// Check nodeRevived
-			// nodeRevivedChan := make(chan bool, len(m.nodeAdrs)-len(m.activeNodes))
-			// for ip, active := range m.nodeAdrs {
-			// 	if !active {
-			// 		wg.Add(1)
-			// 		go func(ip string, wg *sync.WaitGroup) {
-			// 			defer wg.Done()
-			// 			_, err := m.client.Get(getURL(ip, "3000", "ping"))
-			// 			if err != nil {
-			// 				return
-			// 			}
-			// 			nodeRevivedChan <- true
-			// 		}(ip, &wg)
-			// 	}
-			// }
-			// wg.Wait()
-			// close(nodeRevivedChan)
-			// for ifNodeRevived := range nodeRevivedChan {
-			// 	nodeRevived = ifNodeRevived || nodeRevived
-			// }
-
-			// TODO: Check end condition
-
-			currentIter++
-
-			// TODO: JOSH send the master condition to GUI
-			//guiMsg := guiSend{master: m, iter: currentIter}
-			//req, err := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer(guiMsg), currentIter)
 		}
+
+		nodeDiedChan := make(chan bool, len(m.activeNodes))
+		inactiveChan := make(chan bool, len(m.activeNodes))
+
+		var wg sync.WaitGroup
+		for ip, active := range m.nodeAdrs {
+			if active {
+				wg.Add(1)
+				go func(ip string, nodeDiedChan, inactiveChan chan bool, wg *sync.WaitGroup) {
+					// TODO: Start superstep
+					defer wg.Done()
+
+					resp, err := m.client.Get(getURL(ip, "3000", "startSuperstep"))
+					if err != nil {
+						nodeDiedChan <- true
+						return
+					}
+
+					if resp.StatusCode != http.StatusOK {
+						nodeDiedChan <- true
+						return
+					}
+
+					// Start pinging
+					for {
+						// pingResp, err2 := m.client.Get(getURL(ip, "3000", "ping"))
+						req, _ := http.NewRequest("POST", getURL(ip, "3000", "ping"), bytes.NewBuffer([]byte("Completed Superstep?")))
+						pingResp, err2 := m.client.Do(req)
+						if err2 != nil {
+							nodeDiedChan <- true
+							return
+						}
+
+						if pingResp.StatusCode != http.StatusOK {
+							nodeDiedChan <- true
+							return
+						}
+
+						bodyBytes, _ := ioutil.ReadAll(resp.Body)
+						result := string(bodyBytes)
+						if result != "still not done" {
+							var activeVert []int
+							json.Unmarshal(bodyBytes, &activeVert)
+							if len(activeVert) == 0 {
+								inactiveChan <- true
+							} else {
+								inactiveChan <- false
+							}
+						}
+						time.Sleep(time.Second * 10)
+					}
+				}(ip, nodeDiedChan, inactiveChan, &wg)
+			}
+		}
+
+		wg.Wait()
+		close(nodeDiedChan)
+		for ifNodeDied := range nodeDiedChan {
+			nodeDied = ifNodeDied || nodeDied
+		}
+
+		allInactive := true
+		for ifAllInactive := range inactiveChan {
+			allInactive = allInactive && ifAllInactive
+		}
+		if allInactive {
+			fmt.Println("Computation has completed.")
+			break
+		}
+
+		// Check nodeRevived
+		// nodeRevivedChan := make(chan bool, len(m.nodeAdrs)-len(m.activeNodes))
+		// for ip, active := range m.nodeAdrs {
+		// 	if !active {
+		// 		wg.Add(1)
+		// 		go func(ip string, wg *sync.WaitGroup) {
+		// 			defer wg.Done()
+		// 			_, err := m.client.Get(getURL(ip, "3000", "ping"))
+		// 			if err != nil {
+		// 				return
+		// 			}
+		// 			nodeRevivedChan <- true
+		// 		}(ip, &wg)
+		// 	}
+		// }
+		// wg.Wait()
+		// close(nodeRevivedChan)
+		// for ifNodeRevived := range nodeRevivedChan {
+		// 	nodeRevived = ifNodeRevived || nodeRevived
+		// }
+
+		// TODO: Check end condition
+
+		currentIter++
+
+		// TODO: JOSH send the master condition to GUI
+		//guiMsg := guiSend{master: m, iter: currentIter}
+		//req, err := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer(guiMsg), currentIter)
+
 	}
 }
