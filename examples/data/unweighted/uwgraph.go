@@ -32,6 +32,15 @@ func check(e error) {
     }
 }
 
+func stringInSlice(a int, list []int) bool {
+    for _, b := range list {
+        if b == a {
+            return false
+        }
+    }
+    return true
+}
+
 func writeToJson(jsonFile interface{}, name string, size int){
 	jsonString, err := json.Marshal(jsonFile)
     fmt.Println(err)
@@ -92,19 +101,29 @@ func main() {
 		fmt.Println("Number of nodes %d", numNodes)
 
 	// for each of the nodes 
+	traversedEdges := []int{}
+	traversedEdges = append(traversedEdges, node)
+
 		for node2 := 1; node2 <= numNodes; node2++ {
+
 			rndNode := rand.Intn(maxNoNodes)
-			for rndNode == 0 {
+			for stringInSlice(rndNode, traversedEdges) == false || rndNode == 0 {
 				rndNode = rand.Intn(maxNoNodes)
 			}
-			totalEdgeMap[rndNode] = append(totalEdgeMap[rndNode], Vertice{VerticeId:node2, Value:nodeVals[rndNode].Value})
+
+			// for  {
+			// 	rndNode = rand.Intn(maxNoNodes)
+			// }
+
+			totalEdgeMap[node] = append(totalEdgeMap[node], Vertice{VerticeId:rndNode, Value:nodeVals[rndNode].Value})
+			traversedEdges = append(traversedEdges, rndNode)
 		}
  	}
  	
     infoInt := Info{Name:aggregatorName, NumVertices:maxNoNodes}
  	// infoMap := map[string]interface{}{"info":interface{}{"name":aggregatorName, "numVertices":numNodes}}
 
- 	generatedJson := map[string]interface{}{"info": infoInt, "edges":nodeVals, "vertices":totalEdgeMap}
+ 	generatedJson := map[string]interface{}{"info": infoInt, "vertices":nodeVals, "edges":totalEdgeMap}
 
 
  	d2 := map[string]int{"max_value":maxValSoFar, "min_value":minValSoFar}
@@ -113,9 +132,9 @@ func main() {
     fmt.Println("Max Value", maxValSoFar)
     fmt.Println("min Value", minValSoFar)
 
-    writeToJson(generatedJson,  "solutions"+os.Args[1], maxNoNodes)
+    writeToJson(generatedJson, os.Args[1], maxNoNodes)
 
-    writeToJson(d2, "solutions", maxNoNodes)
+    writeToJson(d2, "solutions"+os.Args[1], maxNoNodes)
 
 
 }
