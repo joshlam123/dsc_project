@@ -199,7 +199,9 @@ func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(rw, "NOT OK")
 	} else {
 		defer pingPong.Release(1)
-		fmt.Fprintf(rw, "OK")
+		fmt.Println("Acquired Sempahore to disseminate graph")
+		printGraphReader(*gr)
+		fmt.Fprintf(rw, "ok")
 	}
 }
 
@@ -213,6 +215,7 @@ func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 
 func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 	// map[int][]float64
+	fmt.Fprintf(rw, "Start receive from peers")
 	defer r.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
