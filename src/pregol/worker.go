@@ -63,7 +63,9 @@ func initVertices(gr graphReader) {
 			make(map[int]float64),
 			gr.Edges[vID]}
 
-		// add to Worker's partition list
+		if _, ok := w.partToVert[partID]; !ok {
+			w.partToVert[partID] = make(map[int]*Vertex)
+		}
 		w.partToVert[partID][v.Id] = &v
 	}
 }
