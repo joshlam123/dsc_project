@@ -97,14 +97,14 @@ func main() {
 			for rndNode == 0 {
 				rndNode = rand.Intn(maxNoNodes)
 			}
-			totalEdgeMap[rndNode] = append(totalEdgeMap[rndNode], Vertice{VerticeId:node2, Value:nodeVals[rndNode].Value})
+			totalEdgeMap[node2] = append(totalEdgeMap[node2], Vertice{VerticeId:rndNode, Value:nodeVals[rndNode].Value})
 		}
  	}
  	
     infoInt := Info{Name:aggregatorName, NumVertices:maxNoNodes}
  	// infoMap := map[string]interface{}{"info":interface{}{"name":aggregatorName, "numVertices":numNodes}}
 
- 	generatedJson := map[string]interface{}{"info": infoInt, "edges":nodeVals, "vertices":totalEdgeMap}
+ 	generatedJson := map[string]interface{}{"info": infoInt, "vertices":nodeVals, "nodes":totalEdgeMap}
 
 
  	d2 := map[string]int{"max_value":maxValSoFar, "min_value":minValSoFar}
