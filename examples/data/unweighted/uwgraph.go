@@ -104,7 +104,7 @@ func main() {
     infoInt := Info{Name:aggregatorName, NumVertices:maxNoNodes}
  	// infoMap := map[string]interface{}{"info":interface{}{"name":aggregatorName, "numVertices":numNodes}}
 
- 	generatedJson := map[string]interface{}{"info": infoInt, "vertices":nodeVals, "nodes":totalEdgeMap}
+ 	generatedJson := map[string]interface{}{"info": infoInt, "vertices":nodeVals, "edges":totalEdgeMap}
 
 
  	d2 := map[string]int{"max_value":maxValSoFar, "min_value":minValSoFar}

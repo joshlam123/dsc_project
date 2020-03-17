@@ -71,6 +71,6 @@ func getGraphFromFile(graphFile string) *graphReader {
 
 
 func main() {
-	gr := getGraphFromFile("data/unweighted/prob/randm20.json")
+	gr := getGraphFromFile("data/unweighted/prob/rand20.json")
 	printGraphReader(*gr)
 }
