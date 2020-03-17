@@ -21,34 +21,26 @@ type Vertex struct {
 type UDF func(vertex *Vertex, superstep int) (bool, map[int]float64)
 
 func (v *Vertex) SetInEdge(newVal []float64) {
-	v.InEdges = append(v.InEdges, newVal...)
+	fmt.Println(v.InEdges)
+	//v.InEdges = append(v.InEdges, newVal...)
+	for _, i := range newVal {
+		v.InEdges = append(v.InEdges, i)
+	}
+	fmt.Println("in edge updated in setinEdge: ", v.InEdges)
 }
 
 func (v *Vertex) Compute(udf UDF, superstep int) ResultMsg {
-	// do computations by iterating over messages from each incoming edge.
-	//select {
-	//case v.InEdges = <-v.InMsg:
-	//	v.flag, v.outMsg = udf(v, superstep)
-	//	return ResultMsg{v.Id, false, v.outMsg}
-	//
-	//default:
-	//	if v.flag {
-	//		return v.VoteToHalt()
-	//	} else {
-	//		v.flag, v.outMsg = udf(v, superstep)
-	//		return ResultMsg{v.Id, false, v.outMsg}
-	//	}
-	//}
-
-	if v.InEdges != nil {
+	v.outMsg = make(map[int]float64)
+	if len(v.InEdges) != 0 {
 		v.flag, v.outMsg = udf(v, superstep)
-		v.InEdges = nil
+		v.InEdges = make([]float64, 0)
 		return ResultMsg{v.Id, false, v.outMsg}
 	} else {
 		if v.flag {
 			return v.VoteToHalt()
 		} else {
 			v.flag, v.outMsg = udf(v, superstep)
+			v.InEdges = make([]float64, 0)
 			return ResultMsg{v.Id, false, v.outMsg}
 		}
 	}

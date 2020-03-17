@@ -38,12 +38,28 @@ type graphReader struct {
 }
 
 func printGraphReader(gr graphReader) {
-	fmt.Println("Graph ID: ", gr.Info.NodeID)
+	fmt.Println("Node ID: ", gr.Info.NodeID)
+	fmt.Println("-------------")
 	fmt.Println("# Vertices:", gr.Info.NumVertices)
-	fmt.Println("Graph contains vertices ---")
+
+	fmt.Println("------Initial vertex values-----")
 	for vID, vert := range gr.Vertices {
-		fmt.Println("Vertice", vID, ": ", vert.Value)
+		fmt.Println("Value of Vertex: ", vID, ": ", vert.Value)
 	}
+	fmt.Println("-------------")
+
+	if len(gr.ActiveNodes) != 0 {
+		fmt.Println("Partitions:", gr.ActiveNodes[gr.Info.NodeID].PartitionList)
+	}
+	fmt.Println("-------------")
+
+	//for partID, nodeID := range gr.PartitionToNode{
+	//	fmt.Println("Partition ", partID, "is in node: ", nodeID)
+	//}
+
+	//for vID, val := range(gr.Vertices){
+	//	fmt.Println("Value of Vertex ", vID, ": ", val.Value)
+	//}
 }
 
 func newGraphReader() graphReader {

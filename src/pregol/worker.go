@@ -20,6 +20,7 @@ var outQLock = sync.RWMutex{}
 var activeVertLock = sync.RWMutex{}              // ensure that one partition access activeVert variable at a time
 var pingPong = semaphore.NewWeighted(int64(1))   // flag: (A) whether superstep is completed; (B) whether initVertices is done
 var busyWorker = semaphore.NewWeighted(int64(0)) // flag: Check if any goroutines are still handling incoming messages from peer workers
+var superstep = 0
 
 // Worker ...
 type Worker struct {
@@ -65,8 +66,10 @@ func initVertices(gr graphReader) {
 		if _, ok := w.partToVert[partID]; !ok {
 			w.partToVert[partID] = make(map[int]*Vertex)
 		}
-		w.partToVert[partID][v.Id] = &v
+		w.partToVert[partID][vID] = &v
 	}
+	fmt.Println("Done loading, releasing pingpong.")
+	printGraphReader(gr)
 }
 
 func startSuperstep() {
@@ -74,29 +77,45 @@ func startSuperstep() {
 	defer pingPong.Release(1)
 
 	// sending values to vertices through InMsg Channel
+	fmt.Println("inqueue: ", w.inQueue)
 	for vID, val := range w.inQueue {
-		w.partToVert[w.ID][vID].SetInEdge(val)
+		partID := getPartition(vID, w.graphReader.Info.NumPartitions)
+		fmt.Println("new val: ", val)
+		if _, ok := w.partToVert[partID][vID]; !ok {
+			fmt.Println("not ok")
+		}
+
+		w.partToVert[partID][vID].SetInEdge(val)
 	}
 
 	// clearing queues so new values are not appended to old values (refresh for fresh superStep)
 	// same for activeVert
-	w.inQueue = make(map[int][]float64)
 	w.outQueue = make(map[int][]float64)
 	w.activeVert = make([]int, 0)
 
 	var wg sync.WaitGroup
 	for _, vList := range w.partToVert {
-		wg.Add(1)   // add waitGroup for each partition: vertex list
-		go func() { // for each partition, launch go routine to call compute for each of its vertex
+		wg.Add(1)                        // add waitGroup for each partition: vertex list
+		go func(vList map[int]*Vertex) { // for each partition, launch go routine to call compute for each of its vertex
 			defer wg.Done()
 			for _, v := range vList { // for each vertex in partition, compute().
-				resultmsg := v.Compute(w.udf, 1) //TODO: get superstep number
-				processVertResult(resultmsg)     //populate outQueue with return value of compute()
+				fmt.Println("Computing for vertice: ", v.Id)
+				resultmsg := v.Compute(w.udf, superstep) //TODO: get superstep number
+				fmt.Println("Finished computing for vertice: ", v.Id)
+				processVertResult(resultmsg) //populate outQueue with return value of compute()
+				fmt.Println("Populating out queue with computed value for vertex: ", v.Id)
 			}
-		}()
+		}(vList)
 	}
 	wg.Wait()
+	w.inQueue = make(map[int][]float64)
+
+	fmt.Println("-----------------------------")
+	fmt.Println("Ended all computations for vertices in partition. Disseminating msgs from outq")
 	disseminateMsgFromOutQ() // send values to inqueue of respective worker nodes
+	fmt.Print("Partition has finished superstep.")
+	fmt.Println("-----------------------------")
+	superstep++
 }
 
 func disseminateMsgFromOutQ() {
@@ -105,6 +124,7 @@ func disseminateMsgFromOutQ() {
 	nodeToOutQ := make(map[int]map[int][]float64)
 
 	// iterate over the worker's outqueue and prepare to disseminate it to the correct destination vertexID
+	fmt.Println("OutQueue: ", w.outQueue)
 	for m, n := range w.outQueue {
 
 		outQLock.RLock()
@@ -112,8 +132,13 @@ func disseminateMsgFromOutQ() {
 
 		partID := getPartition(m, w.graphReader.Info.NumPartitions)
 		workerID := w.graphReader.PartitionToNode[partID]
+
+		if _, ok := nodeToOutQ[workerID]; !ok {
+			nodeToOutQ[workerID] = make(map[int][]float64)
+		}
 		nodeToOutQ[workerID][m] = n
 	}
+	fmt.Println("Finished building nodeToOutQ")
 
 	// set a waitgroup to wait for disseminating to all other workers (incl. yourself)
 	var wg sync.WaitGroup
@@ -128,9 +153,14 @@ func disseminateMsgFromOutQ() {
 			go func(nodeID int, outQ map[int][]float64) {
 				inQLock.Lock()
 				defer inQLock.Unlock()
+				defer wg.Done()
 
 				for vID := range outQ {
-					w.inQueue[vID] = append(w.inQueue[vID], outQ[vID]...)
+					//w.inQueue[vID] = append(w.inQueue[vID], outQ[vID]...)
+					for i := range outQ[vID] {
+						w.inQueue[vID] = append(w.inQueue[vID], outQ[vID][i])
+					}
+					fmt.Println("Populating own inQ.")
 				}
 
 			}(nodeID, outQ)
@@ -141,6 +171,8 @@ func disseminateMsgFromOutQ() {
 
 			// send values to correct worker
 			go func() {
+				defer wg.Done()
+				fmt.Println("Sending InQ values to worker via json post")
 				_, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
 				if err != nil {
 					log.Fatalln(err)
@@ -149,6 +181,7 @@ func disseminateMsgFromOutQ() {
 		}
 	}
 	wg.Wait()
+
 }
 
 // Process results from vertices:
@@ -159,8 +192,10 @@ func processVertResult(rm ResultMsg) {
 	// Populate outQueue with outgoing messages
 	outQLock.Lock()
 	for dstVert, msg := range rm.msg {
+		fmt.Println("Message: ", rm.msg)
 		if msgList, ok := w.outQueue[dstVert]; ok {
 			msgList = append(msgList, msg)
+			w.outQueue[dstVert] = msgList
 		} else {
 			w.outQueue[dstVert] = []float64{msg}
 		}
@@ -180,7 +215,7 @@ func initConnectionHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(rw, "received")
+	fmt.Fprintln(rw, "received")
 	bodyBytes, err := ioutil.ReadAll(r.Body) //arr of bytes
 	if err != nil {
 		panic(err)
@@ -195,21 +230,23 @@ func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 	go initVertices(*gr)
 
 	if err := pingPong.Acquire(ctx, 1); err != nil {
-		log.Printf("Failed to acquire semaphore: %v", err)
+		log.Printf("Failed to acquire semaphore: %v to load graph", err)
 		fmt.Fprintf(rw, "NOT OK")
 	} else {
 		defer pingPong.Release(1)
-		fmt.Println("Acquired Sempahore to disseminate graph")
+		fmt.Println("Acquired Sempahore to load graph")
 		printGraphReader(*gr)
-		fmt.Fprintf(rw, "ok")
+		fmt.Fprintln(rw, "ok")
 	}
 }
 
 func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 	if err := pingPong.Acquire(ctx, 1); err != nil {
-		log.Printf("Failed to acquire semaphore: %v", err)
+		log.Printf("Failed to acquire semaphore: %v to start superstep", err)
 	} else {
-		fmt.Fprintf(rw, "startedSuperstep")
+		fmt.Println("Acquired semaphore to startedSuperstep")
+		fmt.Println("Starting superstep.")
+		go startSuperstep()
 	}
 }
 
@@ -250,14 +287,18 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 	// read the ping request
 	bodyByte, _ := ioutil.ReadAll(r.Body)
 	bodyString := string(bodyByte)
+	fmt.Println("received ping")
+	fmt.Println("bodystring: ", bodyString)
 
 	if bodyString == "Completed graphHandler?" {
 		if pingPong.TryAcquire(1) == false {
-			log.Printf("Failed to acquire semaphore")
+			log.Printf("Failed to acquire semaphore for graphHandler")
 			//rw.Write([]byte("Still not done"))
+			fmt.Println("I'm not done with graphHandler.")
 			fmt.Fprintf(rw, "still not done")
 		} else {
 			defer pingPong.Release(1)
+			fmt.Println("I am done with graphHandler.")
 			fmt.Fprintf(rw, "done")
 		}
 	} else if bodyString == "Completed Superstep?" {
@@ -265,30 +306,40 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 		// if unable to access semaphore, send "still not done" to master
 		if pingPong.TryAcquire(1) == false {
 			log.Printf("Failed to acquire semaphore")
+			fmt.Println("Master pinged, but I'm not done with my superstep :(")
 			//rw.Write([]byte("Still not done"))
 			fmt.Fprintf(rw, "still not done")
 		} else {
-
+			fmt.Println("Acquired sempahore to signal superstep completed.")
 			defer pingPong.Release(1)
 
-			if busyWorker.TryAcquire(1) == false {
+			if busyWorker.TryAcquire(1) == true {
+				busyWorker.Release(1)
+				fmt.Println("Acquire busyworker, still handling peer messages.")
 
 			} else {
-				defer busyWorker.Release(1)
 				//resp := map[string][]int{
 				//	"Active Nodes": w.activeVert,
 				//}
 
-				outBytes, error := json.Marshal(w.activeVert)
+				outBytes, _ := json.Marshal(w.activeVert)
 
-				if error != nil {
-					http.Error(rw, error.Error(), http.StatusInternalServerError)
-					return
-				}
 				rw.Write(outBytes)
+				fmt.Println("Outbytes: ", outBytes)
+				fmt.Println("Sending active vertices to master: ", w.activeVert)
 			}
 		}
 	}
+}
+
+func terminateHandler(rw http.ResponseWriter, r *http.Request) {
+	printGraphReader(w.graphReader)
+	for _, vert := range w.partToVert {
+		for _, v := range vert {
+			fmt.Println("Value of vertex ", v.Id, ": ", v.Val)
+		}
+	}
+	//fmt.Println("Max Value: ", w.partToVert[1][0].Val)
 }
 
 // Run ...
@@ -300,5 +351,6 @@ func Run() {
 	http.HandleFunc("/saveState", saveStateHandler)
 	http.HandleFunc("/incomingMsg", workerToWorkerHandler)
 	http.HandleFunc("/ping", pingHandler)
+	http.HandleFunc("/terminate", terminateHandler)
 	http.ListenAndServe(":3000", nil)
 }
