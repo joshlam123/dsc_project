@@ -2,6 +2,7 @@ package pregol
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -34,6 +35,15 @@ type graphReader struct {
 	Edges           map[int][]edgeReader
 	PartitionToNode map[int]int
 	ActiveNodes     []activeNode
+}
+
+func printGraphReader(gr graphReader) {
+	fmt.Println("Graph ID: ", gr.Info.NodeID)
+	fmt.Println("# Vertices:", gr.Info.NumVertices)
+	fmt.Println("Graph contains vertices ---")
+	for vID, vert := range gr.Vertices {
+		fmt.Println("Vertice", vID, ": ", vert.Value)
+	}
 }
 
 func newGraphReader() graphReader {

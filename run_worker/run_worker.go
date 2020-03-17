@@ -1,7 +1,7 @@
 package main
 
 import (
-	"../src/pregol"
+	"dsc_project/src/pregol"
 )
 
 func main() {
@@ -11,5 +11,4 @@ func main() {
 		return false, make(map[int]float64)
 	})
 	pregol.Run()
-	select {}
 }
