@@ -32,8 +32,7 @@ type Worker struct {
 	graphReader graphReader
 }
 
-// InitWorker ...
-func InitWorker() {
+func init() {
 	w.inQueue = make(map[int][]float64)
 	w.outQueue = make(map[int][]float64)
 	w.partToVert = make(map[int]map[int]*Vertex)

@@ -5,7 +5,6 @@ import (
 )
 
 func main() {
-	pregol.InitWorker()
 	pregol.SetUdf(func(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 		// Do smth
 
