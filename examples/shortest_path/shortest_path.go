@@ -11,7 +11,6 @@ import (
 func MakeShortestPath(sourceID int) pregol.UDF {
 	return func(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 		var msgs map[int]float64
-		newMin := false
 		if superstep == 0 {
 			if vertex.Id == sourceID {
 				vertex.Val = 0
@@ -19,7 +18,7 @@ func MakeShortestPath(sourceID int) pregol.UDF {
 				vertex.Val = math.Inf(+1)
 			}
 		}
-		newMin = false
+		newMin := false
 		for _, msg := range vertex.InEdges {
 			if msg < vertex.Val {
 				vertex.Val = msg
