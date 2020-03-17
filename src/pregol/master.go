@@ -117,6 +117,7 @@ func (m *Master) AssignPartitions(graphFile string) {
 		m.graphsToNodes[i].Info.NodeID = i
 		m.graphsToNodes[i].Info.NumPartitions = m.numPartitions
 		m.graphsToNodes[i].ActiveNodes = m.activeNodes
+		m.graphsToNodes[i].PartitionToNode = g.PartitionToNode
 	}
 
 	for k, v := range g.Vertices {
@@ -242,6 +243,7 @@ func (m *Master) Run() {
 					// Start pinging
 					for {
 						// pingResp, err2 := m.client.Get(getURL(ip, "3000", "ping"))
+						fmt.Println("Pinging", ip)
 						req, _ := http.NewRequest("POST", getURL(ip, "3000", "ping"), bytes.NewBuffer([]byte("Completed Superstep?")))
 						pingResp, err2 := m.client.Do(req)
 						if err2 != nil {
@@ -253,36 +255,56 @@ func (m *Master) Run() {
 							nodeDiedChan <- true
 							return
 						}
-
-						bodyBytes, _ := ioutil.ReadAll(resp.Body)
+						defer pingResp.Body.Close()
+						bodyBytes, _ := ioutil.ReadAll(pingResp.Body)
+						fmt.Println(bodyBytes)
 						result := string(bodyBytes)
+						fmt.Println(result)
 						if result != "still not done" {
 							var activeVert []int
 							json.Unmarshal(bodyBytes, &activeVert)
+							fmt.Println(activeVert)
 							if len(activeVert) == 0 {
+								fmt.Println("No active workers")
 								inactiveChan <- true
 							} else {
 								inactiveChan <- false
 							}
+							return
+						} else {
+							fmt.Println(ip, "still busy")
 						}
-						time.Sleep(time.Second * 10)
+						time.Sleep(time.Second * 5)
 					}
 				}(ip, nodeDiedChan, inactiveChan, &wg)
 			}
 		}
-
+		fmt.Println("Waiting")
 		wg.Wait()
+		fmt.Println("Superstep completed")
 		close(nodeDiedChan)
+		fmt.Println("Checking for dead workers")
 		for ifNodeDied := range nodeDiedChan {
 			nodeDied = ifNodeDied || nodeDied
 		}
-
+		close(inactiveChan)
+		fmt.Println("Checking for active workers")
 		allInactive := true
 		for ifAllInactive := range inactiveChan {
 			allInactive = allInactive && ifAllInactive
 		}
 		if allInactive {
 			fmt.Println("Computation has completed.")
+			for ip, active := range m.nodeAdrs {
+				if active {
+					wg.Add(1)
+					go func(ip string, wg *sync.WaitGroup) {
+						defer wg.Done()
+						m.client.Get(getURL(ip, "3000", "terminate"))
+					}(ip, &wg)
+				}
+			}
+			wg.Wait()
 			break
 		}
 
