@@ -61,6 +61,8 @@ var aggregatorName string
 // main takes in two command line arguements: a fileName and an aggregatorName. The file must be stored in a textfile 
 // in the examples directory as this script will read the file name from there. aggregatorName will be passed to the master
 func main() {
+	// make sure graph is strongly connected 
+
 	var maxValSoFar int = 0
 	var minValSoFar int = 0
 	aggregatorName = os.Args[1]
@@ -107,7 +109,7 @@ func main() {
 		for node2 := 1; node2 <= numNodes; node2++ {
 
 			rndNode := rand.Intn(maxNoNodes)
-			for stringInSlice(rndNode, traversedEdges) == false || rndNode == 0 {
+			for stringInSlice(rndNode, traversedEdges) == false && rndNode == 0 {
 				rndNode = rand.Intn(maxNoNodes)
 			}
 

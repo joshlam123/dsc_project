@@ -33,6 +33,15 @@ func check(e error) {
     }
 }
 
+func stringInSlice(a int, list []int) bool {
+    for _, b := range list {
+        if b == a {
+            return false
+        }
+    }
+    return true
+}
+
 func writeToJson(jsonFile interface{}, name string, size int){
 	jsonString, err := json.Marshal(jsonFile)
     fmt.Println(err)
@@ -53,6 +62,8 @@ var aggregatorName string
 // main takes in two command line arguements: a fileName and an aggregatorName. The file must be stored in a textfile 
 // in the examples directory as this script will read the file name from there. aggregatorName will be passed to the master
 func main() {
+	// make sure graph is strongly connected 
+
 	var maxValSoFar int = 0
 	var minValSoFar int = 0
 	aggregatorName = os.Args[1]
@@ -92,25 +103,33 @@ func main() {
 		}
 		fmt.Println("Number of nodes %d", numNodes)
 
-
 	// for each of the nodes 
+	traversedEdges := []int{}
+	traversedEdges = append(traversedEdges, node)
+
 		for node2 := 1; node2 <= numNodes; node2++ {
-			rand.Seed(time.Now().UnixNano())
 
 			rndNode := rand.Intn(maxNoNodes)
-			for rndNode == 0 {
+			for stringInSlice(rndNode, traversedEdges) == false && rndNode == 0 {
 				rndNode = rand.Intn(maxNoNodes)
 			}
+
+			// for  {
+			// 	rndNode = rand.Intn(maxNoNodes)
+			// }
+
 			var weight float64 = rand.Float64() * float64(maxNoNodes)
 
-			totalEdgeMap[node2] = append(totalEdgeMap[node2], Vertice{VerticeId:rndNode, Value:nodeVals[rndNode].Value, Weight:weight})
+			totalEdgeMap[node] = append(totalEdgeMap[node], Vertice{VerticeId:rndNode, Value:nodeVals[rndNode].Value, Weight:weight})
+
+			traversedEdges = append(traversedEdges, rndNode)
 		}
  	}
  	
     infoInt := Info{Name:aggregatorName, NumVertices:maxNoNodes}
  	// infoMap := map[string]interface{}{"info":interface{}{"name":aggregatorName, "numVertices":numNodes}}
 
- 	generatedJson := map[string]interface{}{"info": infoInt, "vertices":nodeVals, "nodes":totalEdgeMap}
+ 	generatedJson := map[string]interface{}{"info": infoInt, "vertices":nodeVals, "edges":totalEdgeMap}
 
 
  	d2 := map[string]int{"max_value":maxValSoFar, "min_value":minValSoFar}
@@ -121,7 +140,7 @@ func main() {
 
     writeToJson(generatedJson, os.Args[1], maxNoNodes)
 
-    writeToJson(d2, "solutions", maxNoNodes)
+    writeToJson(d2, "solutions"+os.Args[1], maxNoNodes)
 
 
 }

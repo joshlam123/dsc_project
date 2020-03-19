@@ -173,7 +173,7 @@ func disseminateMsgFromOutQ() {
 			go func() {
 				defer wg.Done()
 				fmt.Println("Sending InQ values to worker via json post")
-				_, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
+				_, err := http.NewRequest("POST", getURL(workerIP, "3000", "incomingMsg"), bytes.NewBuffer(outQBytes))
 				if err != nil {
 					log.Fatalln(err)
 				}
