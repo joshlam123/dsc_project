@@ -113,7 +113,7 @@ func startSuperstep() {
 	fmt.Println("-----------------------------")
 	fmt.Println("Ended all computations for vertices in partition. Disseminating msgs from outq")
 	disseminateMsgFromOutQ() // send values to inqueue of respective worker nodes
-	fmt.Print("Partition has finished superstep.")
+	fmt.Println("Partition has finished superstep.")
 	fmt.Println("-----------------------------")
 	superstep++
 }
@@ -173,10 +173,14 @@ func disseminateMsgFromOutQ() {
 			go func() {
 				defer wg.Done()
 				fmt.Println("Sending InQ values to worker via json post")
-				_, err := http.NewRequest("POST", getURL(workerIP, "3000", "incomingMsg"), bytes.NewBuffer(outQBytes))
+
+				c := &http.Client{}
+				//_, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
+				req, err := http.NewRequest("POST", getURL(workerIP, "3000", "incomingMsg"), bytes.NewBuffer(outQBytes))
 				if err != nil {
 					log.Fatalln(err)
 				}
+				c.Do(req)
 			}()
 		}
 	}
@@ -252,6 +256,7 @@ func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 
 func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 	// map[int][]float64
+	fmt.Println("Receiving messages from peers")
 	fmt.Fprintf(rw, "Start receive from peers")
 	defer r.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(r.Body)
