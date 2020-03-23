@@ -1,7 +1,7 @@
 package main
 
 import (
-	"dsc_project/src/pregol"
+	"pregol"
 	"fmt"
 )
 
