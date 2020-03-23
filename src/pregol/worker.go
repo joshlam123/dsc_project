@@ -112,7 +112,7 @@ func (w *Worker) startSuperstep() {
 				fmt.Println("Computing for vertice: ", v.Id)
 				resultmsg := v.Compute(w.udf, w.superstep)
 				fmt.Println("Finished computing for vertice: ", v.Id)
-				w.processVertResult(resultmsg) //populate outQueue with return value of compute()
+				w.processVertResult(resultmsg) // populate outQueue with return value of compute()
 				fmt.Println("Populating out queue with computed value for vertex: ", v.Id)
 			}
 		}(vList)
@@ -149,8 +149,6 @@ func (w *Worker) disseminateMsgFromOutQ() {
 		} else {
 			nodeToOutQ[workerID][destVert] = append(nodeToOutQ[workerID][destVert], vals...)
 		}
-
-		//nodeToOutQ[workerID][destVert] = vals
 	}
 	fmt.Println("Finished building nodeToOutQ")
 
@@ -170,7 +168,6 @@ func (w *Worker) disseminateMsgFromOutQ() {
 				defer wg.Done()
 
 				for vID := range outQ {
-					//w.inQueue[vID] = append(w.inQueue[vID], outQ[vID]...)
 					for i := range outQ[vID] {
 						w.inQueue[vID] = append(w.inQueue[vID], outQ[vID][i])
 					}
@@ -189,11 +186,9 @@ func (w *Worker) disseminateMsgFromOutQ() {
 				fmt.Println("Sending InQ values to worker via json post")
 
 				c := &http.Client{}
-				//_, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
 				fmt.Println("Sending to peer: ", outQ)
 				fmt.Println("Stirng OutQBytes: ", string(outQBytes))
 				req, err := http.NewRequest("POST", getURL(workerIP, "3000", "incomingMsg"), bytes.NewBuffer(outQBytes))
-				//req, err := http.NewRequest("POST", getURL(workerIP, "3000", "incomingMsg"), outQBytes)
 				if err != nil {
 					log.Fatalln(err)
 				}
@@ -237,12 +232,10 @@ func initConnectionHandler(rw http.ResponseWriter, r *http.Request) {
 
 func (w *Worker) disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(rw, "received")
-	bodyBytes, err := ioutil.ReadAll(r.Body) //arr of bytes
+	bodyBytes, err := ioutil.ReadAll(r.Body) // arr of bytes
 	if err != nil {
 		panic(err)
 	}
-	// bodyString := string(bodyBytes)
-	// fmt.Println(bodyString)
 
 	// get graph
 	gr := getGraphFromJSONByte(bodyBytes)
@@ -272,7 +265,6 @@ func (w *Worker) startSuperstepHandler(rw http.ResponseWriter, r *http.Request) 
 }
 
 func (w *Worker) workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
-	// map[int][]float64
 	defer r.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -283,10 +275,8 @@ func (w *Worker) workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) 
 		defer w.busyWorker.Release(1)
 
 		fmt.Println("Receiving messages from peers")
-		//fmt.Fprintf(rw, "Start receive from peers")
 
 		var dstToVals map[int][]float64
-		//json.NewDecoder(r.Body).Decode(&dstToVals)
 
 		json.Unmarshal(bodyBytes, &dstToVals)
 		fmt.Println("String bodybytes: ", string(bodyBytes))
@@ -332,7 +322,6 @@ func (w *Worker) pingHandler(rw http.ResponseWriter, r *http.Request) {
 	if bodyString == "Completed graphHandler?" {
 		if w.pingPong.TryAcquire(1) == false {
 			log.Printf("Failed to acquire semaphore for graphHandler")
-			//rw.Write([]byte("Still not done"))
 			fmt.Println("I'm not done with graphHandler.")
 			fmt.Fprintf(rw, "still not done")
 		} else {
@@ -346,7 +335,6 @@ func (w *Worker) pingHandler(rw http.ResponseWriter, r *http.Request) {
 		if w.pingPong.TryAcquire(1) == false {
 			log.Printf("Failed to acquire semaphore")
 			fmt.Println("Master pinged, but I'm not done with my superstep :(")
-			//rw.Write([]byte("Still not done"))
 			fmt.Fprintf(rw, "still not done")
 		} else {
 			fmt.Println("Acquired sempahore to signal superstep completed.")
@@ -356,9 +344,6 @@ func (w *Worker) pingHandler(rw http.ResponseWriter, r *http.Request) {
 				fmt.Println("Acquire busyworker, still handling peer messages.")
 
 			} else {
-				//resp := map[string][]int{
-				//	"Active Nodes": w.activeVert,
-				//}
 				defer w.busyWorker.Release(1)
 
 				outBytes, _ := json.Marshal(w.activeVert)
@@ -378,7 +363,6 @@ func (w *Worker) terminateHandler(rw http.ResponseWriter, r *http.Request) {
 			fmt.Println("Value of vertex ", v.Id, ": ", v.Val)
 		}
 	}
-	//fmt.Println("Max Value: ", w.partToVert[1][0].Val)
 }
 
 // Run ...
@@ -394,6 +378,7 @@ func (w *Worker) Run() {
 	http.ListenAndServe(":3000", nil)
 }
 
+// RunUDF creates a new worker with the given UDF and runs the worker
 func RunUDF(udf UDF) {
 	w := NewWorker(udf)
 	w.Run()
