@@ -268,10 +268,13 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			// do something
 		}
-		var dstToVals map[int][]float64
-		json.Unmarshal(bodyBytes, &dstToVals)
 
-		fmt.Println("Trying to access inQueue ")
+		var dstToVals map[int][]float64
+		json.NewDecoder(r.Body).Decode(&dstToVals)
+
+		//json.Unmarshal(bodyBytes, dstToVals)
+
+		fmt.Println("This is the stuff i received:, ", dstToVals)
 		inQLock.Lock()
 		defer inQLock.Unlock()
 		for dst, vals := range dstToVals {
