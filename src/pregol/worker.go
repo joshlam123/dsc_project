@@ -177,6 +177,7 @@ func disseminateMsgFromOutQ() {
 				c := &http.Client{}
 				//_, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
 				fmt.Println("Sending to peer: ", outQ)
+				fmt.Println("Stirng OutQBytes: ", string(outQBytes))
 				req, err := http.NewRequest("POST", getURL(workerIP, "3000", "incomingMsg"), bytes.NewBuffer(outQBytes))
 				//req, err := http.NewRequest("POST", getURL(workerIP, "3000", "incomingMsg"), outQBytes)
 				if err != nil {
@@ -258,23 +259,23 @@ func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 
 func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 	// map[int][]float64
-	go func(rw http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		// do something
+	}
+	go func(bodyBytes []byte) {
 		busyWorker.Acquire(ctx, 1)
 		defer busyWorker.Release(1)
 
 		fmt.Println("Receiving messages from peers")
 		//fmt.Fprintf(rw, "Start receive from peers")
-		defer r.Body.Close()
-		bodyBytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			// do something
-		}
 
 		var dstToVals map[int][]float64
 		//json.NewDecoder(r.Body).Decode(&dstToVals)
 
 		json.Unmarshal(bodyBytes, &dstToVals)
-		fmt.Println(string(bodyBytes))
+		fmt.Println("String bodybytes: ", string(bodyBytes))
 
 		fmt.Println("This is the stuff i received:, ", dstToVals)
 		inQLock.Lock()
@@ -283,7 +284,7 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 			fmt.Println("Receving values from peer: ", vals)
 			w.inQueue[dst] = append(w.inQueue[dst], vals...)
 		}
-	}(rw, r)
+	}(bodyBytes)
 }
 
 func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
