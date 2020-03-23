@@ -73,7 +73,7 @@ func main() {
 
 	nodeVals := make(map[int]Node)
     // vertices 
-    for node := 1; node <= maxNoNodes; node++ {
+    for node := 0; node < maxNoNodes; node++ {
     	// generate the nodevalues first
     	rand.Seed(time.Now().UnixNano())
 
@@ -93,7 +93,7 @@ func main() {
 
     totalEdgeMap := make(map[int][]Vertice)
     // distinctPoints := make(map[string])
-    for node := 1; node <= maxNoNodes; node++ {
+    for node := 0; node < maxNoNodes; node++ {
     	// edges
 
 	// for each node, generate a random number of values and take the value from nodeVals
@@ -107,10 +107,10 @@ func main() {
 	traversedEdges := []int{}
 	traversedEdges = append(traversedEdges, node)
 
-		for node2 := 1; node2 <= numNodes; node2++ {
+		for node2 := 0; node2 < numNodes; node2++ {
 
 			rndNode := rand.Intn(maxNoNodes)
-			for stringInSlice(rndNode, traversedEdges) == false && rndNode == 0 {
+			for stringInSlice(rndNode, traversedEdges) == false {
 				rndNode = rand.Intn(maxNoNodes)
 			}
 
