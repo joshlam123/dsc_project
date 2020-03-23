@@ -19,7 +19,7 @@ var inQLock = sync.RWMutex{}
 var outQLock = sync.RWMutex{}
 var activeVertLock = sync.RWMutex{}              // ensure that one partition access activeVert variable at a time
 var pingPong = semaphore.NewWeighted(int64(1))   // flag: (A) whether superstep is completed; (B) whether initVertices is done
-var busyWorker = semaphore.NewWeighted(int64(0)) // flag: Check if any goroutines are still handling incoming messages from peer workers
+var busyWorker = semaphore.NewWeighted(int64(1)) // flag: Check if any goroutines are still handling incoming messages from peer workers
 var superstep = 0
 
 // Worker ...
@@ -256,24 +256,26 @@ func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 
 func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 	// map[int][]float64
-	fmt.Println("Receiving messages from peers")
-	fmt.Fprintf(rw, "Start receive from peers")
-	defer r.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		// do something
-	}
-	var dstToVals map[int][]float64
-	json.Unmarshal(bodyBytes, &dstToVals)
-	busyWorker.Release(1)
-	go func(dstToVals map[int][]float64) {
-		defer busyWorker.Acquire(ctx, 1)
+	go func() {
+		busyWorker.Acquire(ctx, 1)
+		defer busyWorker.Release(1)
+
+		fmt.Println("Receiving messages from peers")
+		fmt.Fprintf(rw, "Start receive from peers")
+		defer r.Body.Close()
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			// do something
+		}
+		var dstToVals map[int][]float64
+		json.Unmarshal(bodyBytes, &dstToVals)
+
 		inQLock.Lock()
 		defer inQLock.Unlock()
 		for dst, vals := range dstToVals {
 			w.inQueue[dst] = append(w.inQueue[dst], vals...)
 		}
-	}(dstToVals)
+	}()
 }
 
 func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
@@ -318,14 +320,14 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 			fmt.Println("Acquired sempahore to signal superstep completed.")
 			defer pingPong.Release(1)
 
-			if busyWorker.TryAcquire(1) == true {
-				busyWorker.Release(1)
+			if busyWorker.TryAcquire(1) == false {
 				fmt.Println("Acquire busyworker, still handling peer messages.")
 
 			} else {
 				//resp := map[string][]int{
 				//	"Active Nodes": w.activeVert,
 				//}
+				defer busyWorker.Release(1)
 
 				outBytes, _ := json.Marshal(w.activeVert)
 
