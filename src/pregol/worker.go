@@ -264,7 +264,7 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 		fmt.Println("Receiving messages from peers")
 		//fmt.Fprintf(rw, "Start receive from peers")
 		defer r.Body.Close()
-		bodyBytes, err := ioutil.ReadAll(r.Body)
+		_, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			// do something
 		}
