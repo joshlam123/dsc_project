@@ -178,6 +178,7 @@ func disseminateMsgFromOutQ() {
 				//_, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
 				fmt.Println("Sending to peer: ", outQ)
 				req, err := http.NewRequest("POST", getURL(workerIP, "3000", "incomingMsg"), bytes.NewBuffer(outQBytes))
+				//req, err := http.NewRequest("POST", getURL(workerIP, "3000", "incomingMsg"), outQBytes)
 				if err != nil {
 					log.Fatalln(err)
 				}
@@ -264,15 +265,16 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 		fmt.Println("Receiving messages from peers")
 		//fmt.Fprintf(rw, "Start receive from peers")
 		defer r.Body.Close()
-		_, err := ioutil.ReadAll(r.Body)
+		bodyBytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			// do something
 		}
 
 		var dstToVals map[int][]float64
-		json.NewDecoder(r.Body).Decode(&dstToVals)
+		//json.NewDecoder(r.Body).Decode(&dstToVals)
 
-		//json.Unmarshal(bodyBytes, dstToVals)
+		json.Unmarshal(bodyBytes, &dstToVals)
+		fmt.Println(string(bodyBytes))
 
 		fmt.Println("This is the stuff i received:, ", dstToVals)
 		inQLock.Lock()
