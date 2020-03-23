@@ -257,12 +257,12 @@ func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
 
 func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 	// map[int][]float64
-	go func() {
+	go func(rw http.ResponseWriter, r *http.Request) {
 		busyWorker.Acquire(ctx, 1)
 		defer busyWorker.Release(1)
 
 		fmt.Println("Receiving messages from peers")
-		fmt.Fprintf(rw, "Start receive from peers")
+		//fmt.Fprintf(rw, "Start receive from peers")
 		defer r.Body.Close()
 		bodyBytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -271,13 +271,14 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 		var dstToVals map[int][]float64
 		json.Unmarshal(bodyBytes, &dstToVals)
 
+		fmt.Println("Trying to access inQueue ")
 		inQLock.Lock()
 		defer inQLock.Unlock()
 		for dst, vals := range dstToVals {
 			fmt.Println("Receving values from peer: ", vals)
 			w.inQueue[dst] = append(w.inQueue[dst], vals...)
 		}
-	}()
+	}(rw, r)
 }
 
 func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
