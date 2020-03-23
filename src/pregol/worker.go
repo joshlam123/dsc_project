@@ -290,20 +290,11 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 	var gr graphReader
 
-	// check whether content is json
-	if r.Header.Get("Content-Type") != "" {
-		value, _ := header.ParseValueAndParams(r.Header, "Content-Type")
-		if value != "application/json" {
-			msg := "Content-Type header is not application/json"
-			return &malformedRequest{status: http.StatusUnsupportedMediaType, msg: msg}
-		}
-	}
-
 	// decode json body into graphReader struct
 	// TODO: consider format of saving state
 	err := json.NewDecoder(r.Body).Decode(&gr)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
