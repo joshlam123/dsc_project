@@ -170,18 +170,19 @@ func disseminateMsgFromOutQ() {
 			outQBytes, _ := json.Marshal(outQ)
 
 			// send values to correct worker
-			go func() {
+			go func(workerIP string, outQBytes []byte) {
 				defer wg.Done()
 				fmt.Println("Sending InQ values to worker via json post")
 
 				c := &http.Client{}
 				//_, err := http.NewRequest("POST", "http://"+workerIP+":3000/incomingMsg", bytes.NewBuffer(outQBytes))
+				fmt.Println("Sending to peer: ", outQ)
 				req, err := http.NewRequest("POST", getURL(workerIP, "3000", "incomingMsg"), bytes.NewBuffer(outQBytes))
 				if err != nil {
 					log.Fatalln(err)
 				}
 				c.Do(req)
-			}()
+			}(workerIP, outQBytes)
 		}
 	}
 	wg.Wait()
@@ -273,6 +274,7 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 		inQLock.Lock()
 		defer inQLock.Unlock()
 		for dst, vals := range dstToVals {
+			fmt.Println("Receving values from peer: ", vals)
 			w.inQueue[dst] = append(w.inQueue[dst], vals...)
 		}
 	}()
