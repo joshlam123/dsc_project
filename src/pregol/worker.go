@@ -281,10 +281,28 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
-	// takes the format: writeToJson(jsonFile interface{}, name string) from util.go
-	// send back graphReader and In/Out Queue
+	var gr graphReader
 
-	// get the get request
+	// check whether content is json
+	if r.Header.Get("Content-Type") != "" {
+		value, _ := header.ParseValueAndParams(r.Header, "Content-Type")
+		if value != "application/json" {
+			msg := "Content-Type header is not application/json"
+			return &malformedRequest{status: http.StatusUnsupportedMediaType, msg: msg}
+		}
+	}
+
+	// decode json body into graphReader struct
+	// TODO: consider format of saving state
+	err := json.NewDecoder(r.Body).Decode(&gr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// TODO: parse json to send to Master - graphReader and In/Out Queue
+
+	// wait for the Master's the GET request - isit a ping????
 
 	// define the format of the response
 
