@@ -29,6 +29,5 @@ func PageRank(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 }
 
 func main() {
-	pregol.SetUdf(PageRank)
-	pregol.Run()
+	pregol.RunUDF(PageRank)
 }
