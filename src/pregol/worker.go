@@ -125,18 +125,22 @@ func disseminateMsgFromOutQ() {
 
 	// iterate over the worker's outqueue and prepare to disseminate it to the correct destination vertexID
 	fmt.Println("OutQueue: ", w.outQueue)
-	for m, n := range w.outQueue {
+	for destVert, vals := range w.outQueue {
 
 		outQLock.RLock()
 		defer outQLock.RUnlock()
 
-		partID := getPartition(m, w.graphReader.Info.NumPartitions)
+		partID := getPartition(destVert, w.graphReader.Info.NumPartitions)
 		workerID := w.graphReader.PartitionToNode[partID]
 
 		if _, ok := nodeToOutQ[workerID]; !ok {
 			nodeToOutQ[workerID] = make(map[int][]float64)
+			nodeToOutQ[workerID][destVert] = vals
+		} else {
+			nodeToOutQ[workerID][destVert] = append(nodeToOutQ[workerID][destVert], vals...)
 		}
-		nodeToOutQ[workerID][m] = n
+
+		//nodeToOutQ[workerID][destVert] = vals
 	}
 	fmt.Println("Finished building nodeToOutQ")
 
