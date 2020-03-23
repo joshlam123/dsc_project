@@ -292,10 +292,19 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
-	// takes the format: writeToJson(jsonFile interface{}, name string) from util.go
-	// send back graphReader and In/Out Queue
+	var gr graphReader
 
-	// get the get request
+	// decode json body into graphReader struct
+	// TODO: consider format of saving state
+	err := json.NewDecoder(r.Body).Decode(&gr)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// TODO: parse json to send to Master - graphReader and In/Out Queue
+
+	// wait for the Master's the GET request - isit a ping????
 
 	// define the format of the response
 
