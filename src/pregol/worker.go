@@ -13,15 +13,6 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-var ctx = context.Background()
-var w Worker = Worker{}
-var inQLock = sync.RWMutex{}
-var outQLock = sync.RWMutex{}
-var activeVertLock = sync.RWMutex{}              // ensure that one partition access activeVert variable at a time
-var pingPong = semaphore.NewWeighted(int64(1))   // flag: (A) whether superstep is completed; (B) whether initVertices is done
-var busyWorker = semaphore.NewWeighted(int64(1)) // flag: Check if any goroutines are still handling incoming messages from peer workers
-var superstep = 0
-
 // Worker ...
 type Worker struct {
 	ID          int
@@ -31,27 +22,46 @@ type Worker struct {
 	partToVert  map[int]map[int]*Vertex // partId: {verticeID: Vertex}
 	udf         UDF
 	graphReader graphReader
+	superstep   int
+
+	ctx context.Context
+	inQLock sync.RWMutex
+	outQLock sync.RWMutex
+	activeVertLock sync.RWMutex              // ensure that one partition access activeVert variable at a time
+	pingPong *semaphore.Weighted             // flag: (A) whether superstep is completed; (B) whether initVertices is done
+	busyWorker *semaphore.Weighted           // flag: Check if any goroutines are still handling incoming messages from peer workers
 }
 
-func init() {
+// NewWorker creates and returns an initialized worker
+func NewWorker(udf UDF) *Worker {
+	w := &Worker{udf: udf}
+	w.Init()
+	return w
+}
+
+// Init initializes a worker
+func (w *Worker) Init() {
+	w.ctx = context.Background()
+	w.inQLock = sync.RWMutex{}
+	w.outQLock = sync.RWMutex{}
+	w.activeVertLock = sync.RWMutex{}              // ensure that one partition access activeVert variable at a time
+	w.pingPong = semaphore.NewWeighted(int64(1))   // flag: (A) whether superstep is completed; (B) whether initVertices is done
+	w.busyWorker = semaphore.NewWeighted(int64(1)) // flag: Check if any goroutines are still handling incoming messages from peer workers
+
 	w.inQueue = make(map[int][]float64)
 	w.outQueue = make(map[int][]float64)
 	w.partToVert = make(map[int]map[int]*Vertex)
-}
-
-// SetUdf sets the user-defined function for `w`
-func SetUdf(udf UDF) {
-	w.udf = udf
+	w.superstep = 0
 }
 
 // loadVertices loads assigned vertices received from Master
-func initVertices(gr graphReader) {
+func (w *Worker) initVertices(gr graphReader) {
 	// create Vertices
 
-	if err := pingPong.Acquire(ctx, 1); err != nil {
+	if err := w.pingPong.Acquire(w.ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
 	}
-	defer pingPong.Release(1)
+	defer w.pingPong.Release(1)
 
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
@@ -72,9 +82,9 @@ func initVertices(gr graphReader) {
 	printGraphReader(gr)
 }
 
-func startSuperstep() {
+func (w *Worker) startSuperstep() {
 
-	defer pingPong.Release(1)
+	defer w.pingPong.Release(1)
 
 	// sending values to vertices through InMsg Channel
 	fmt.Println("inqueue: ", w.inQueue)
@@ -100,9 +110,9 @@ func startSuperstep() {
 			defer wg.Done()
 			for _, v := range vList { // for each vertex in partition, compute().
 				fmt.Println("Computing for vertice: ", v.Id)
-				resultmsg := v.Compute(w.udf, superstep) //TODO: get superstep number
+				resultmsg := v.Compute(w.udf, w.superstep)
 				fmt.Println("Finished computing for vertice: ", v.Id)
-				processVertResult(resultmsg) //populate outQueue with return value of compute()
+				w.processVertResult(resultmsg) //populate outQueue with return value of compute()
 				fmt.Println("Populating out queue with computed value for vertex: ", v.Id)
 			}
 		}(vList)
@@ -112,13 +122,13 @@ func startSuperstep() {
 
 	fmt.Println("-----------------------------")
 	fmt.Println("Ended all computations for vertices in partition. Disseminating msgs from outq")
-	disseminateMsgFromOutQ() // send values to inqueue of respective worker nodes
+	w.disseminateMsgFromOutQ() // send values to inqueue of respective worker nodes
 	fmt.Println("Partition has finished superstep.")
 	fmt.Println("-----------------------------")
-	superstep++
+	w.superstep++
 }
 
-func disseminateMsgFromOutQ() {
+func (w *Worker) disseminateMsgFromOutQ() {
 	// this function is called during startSuperstep() when the worker is disseminating the vertice values
 
 	nodeToOutQ := make(map[int]map[int][]float64)
@@ -127,8 +137,8 @@ func disseminateMsgFromOutQ() {
 	fmt.Println("OutQueue: ", w.outQueue)
 	for destVert, vals := range w.outQueue {
 
-		outQLock.RLock()
-		defer outQLock.RUnlock()
+		w.outQLock.RLock()
+		defer w.outQLock.RUnlock()
 
 		partID := getPartition(destVert, w.graphReader.Info.NumPartitions)
 		workerID := w.graphReader.PartitionToNode[partID]
@@ -155,8 +165,8 @@ func disseminateMsgFromOutQ() {
 
 			// concurrent writes will happen in the inqueue
 			go func(nodeID int, outQ map[int][]float64) {
-				inQLock.Lock()
-				defer inQLock.Unlock()
+				w.inQLock.Lock()
+				defer w.inQLock.Unlock()
 				defer wg.Done()
 
 				for vID := range outQ {
@@ -199,9 +209,9 @@ func disseminateMsgFromOutQ() {
 //     a) Populate outQueue with outgoing messages
 //     b) Populate activeVert with vertices which are active at the end of superstep
 // Requires concurrency controls as each partition will run its own goroutine and call processVertResult multiple times
-func processVertResult(rm ResultMsg) {
+func (w *Worker) processVertResult(rm ResultMsg) {
 	// Populate outQueue with outgoing messages
-	outQLock.Lock()
+	w.outQLock.Lock()
 	for dstVert, msg := range rm.msg {
 		fmt.Println("Message: ", rm.msg)
 		if msgList, ok := w.outQueue[dstVert]; ok {
@@ -211,13 +221,13 @@ func processVertResult(rm ResultMsg) {
 			w.outQueue[dstVert] = []float64{msg}
 		}
 	}
-	outQLock.Unlock()
+	w.outQLock.Unlock()
 
 	// Populate activeVert with vertices which are active at the end of superstep
 	if rm.halt == false {
-		activeVertLock.Lock()
+		w.activeVertLock.Lock()
 		w.activeVert = append(w.activeVert, rm.sendId)
-		activeVertLock.Unlock()
+		w.activeVertLock.Unlock()
 	}
 }
 
@@ -225,7 +235,7 @@ func initConnectionHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, "connected")
 }
 
-func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
+func (w *Worker) disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(rw, "received")
 	bodyBytes, err := ioutil.ReadAll(r.Body) //arr of bytes
 	if err != nil {
@@ -238,30 +248,30 @@ func disseminateGraphHandler(rw http.ResponseWriter, r *http.Request) {
 	gr := getGraphFromJSONByte(bodyBytes)
 	w.graphReader = *gr
 
-	go initVertices(*gr)
+	go w.initVertices(*gr)
 
-	if err := pingPong.Acquire(ctx, 1); err != nil {
+	if err := w.pingPong.Acquire(w.ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v to load graph", err)
 		fmt.Fprintf(rw, "NOT OK")
 	} else {
-		defer pingPong.Release(1)
+		defer w.pingPong.Release(1)
 		fmt.Println("Acquired Sempahore to load graph")
 		printGraphReader(*gr)
 		fmt.Fprintln(rw, "ok")
 	}
 }
 
-func startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
-	if err := pingPong.Acquire(ctx, 1); err != nil {
+func (w *Worker) startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
+	if err := w.pingPong.Acquire(w.ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v to start superstep", err)
 	} else {
 		fmt.Println("Acquired semaphore to startedSuperstep")
 		fmt.Println("Starting superstep.")
-		go startSuperstep()
+		go w.startSuperstep()
 	}
 }
 
-func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
+func (w *Worker) workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 	// map[int][]float64
 	defer r.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(r.Body)
@@ -269,8 +279,8 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 		// do something
 	}
 	go func(bodyBytes []byte) {
-		busyWorker.Acquire(ctx, 1)
-		defer busyWorker.Release(1)
+		w.busyWorker.Acquire(w.ctx, 1)
+		defer w.busyWorker.Release(1)
 
 		fmt.Println("Receiving messages from peers")
 		//fmt.Fprintf(rw, "Start receive from peers")
@@ -282,8 +292,8 @@ func workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
 		fmt.Println("String bodybytes: ", string(bodyBytes))
 
 		fmt.Println("This is the stuff i received:, ", dstToVals)
-		inQLock.Lock()
-		defer inQLock.Unlock()
+		w.inQLock.Lock()
+		defer w.inQLock.Unlock()
 		for dst, vals := range dstToVals {
 			fmt.Println("Receving values from peer: ", vals)
 			w.inQueue[dst] = append(w.inQueue[dst], vals...)
@@ -312,7 +322,7 @@ func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 
 }
 
-func pingHandler(rw http.ResponseWriter, r *http.Request) {
+func (w *Worker) pingHandler(rw http.ResponseWriter, r *http.Request) {
 	// read the ping request
 	bodyByte, _ := ioutil.ReadAll(r.Body)
 	bodyString := string(bodyByte)
@@ -320,36 +330,36 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Println("bodystring: ", bodyString)
 
 	if bodyString == "Completed graphHandler?" {
-		if pingPong.TryAcquire(1) == false {
+		if w.pingPong.TryAcquire(1) == false {
 			log.Printf("Failed to acquire semaphore for graphHandler")
 			//rw.Write([]byte("Still not done"))
 			fmt.Println("I'm not done with graphHandler.")
 			fmt.Fprintf(rw, "still not done")
 		} else {
-			defer pingPong.Release(1)
+			defer w.pingPong.Release(1)
 			fmt.Println("I am done with graphHandler.")
 			fmt.Fprintf(rw, "done")
 		}
 	} else if bodyString == "Completed Superstep?" {
 		// lock when accessing masterResponse
 		// if unable to access semaphore, send "still not done" to master
-		if pingPong.TryAcquire(1) == false {
+		if w.pingPong.TryAcquire(1) == false {
 			log.Printf("Failed to acquire semaphore")
 			fmt.Println("Master pinged, but I'm not done with my superstep :(")
 			//rw.Write([]byte("Still not done"))
 			fmt.Fprintf(rw, "still not done")
 		} else {
 			fmt.Println("Acquired sempahore to signal superstep completed.")
-			defer pingPong.Release(1)
+			defer w.pingPong.Release(1)
 
-			if busyWorker.TryAcquire(1) == false {
+			if w.busyWorker.TryAcquire(1) == false {
 				fmt.Println("Acquire busyworker, still handling peer messages.")
 
 			} else {
 				//resp := map[string][]int{
 				//	"Active Nodes": w.activeVert,
 				//}
-				defer busyWorker.Release(1)
+				defer w.busyWorker.Release(1)
 
 				outBytes, _ := json.Marshal(w.activeVert)
 
@@ -361,7 +371,7 @@ func pingHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func terminateHandler(rw http.ResponseWriter, r *http.Request) {
+func (w *Worker) terminateHandler(rw http.ResponseWriter, r *http.Request) {
 	printGraphReader(w.graphReader)
 	for _, vert := range w.partToVert {
 		for _, v := range vert {
@@ -372,14 +382,19 @@ func terminateHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 // Run ...
-func Run() {
+func (w *Worker) Run() {
 	// TODO: gerald
 	http.HandleFunc("/initConnection", initConnectionHandler)
-	http.HandleFunc("/disseminateGraph", disseminateGraphHandler)
-	http.HandleFunc("/startSuperstep", startSuperstepHandler)
+	http.HandleFunc("/disseminateGraph", w.disseminateGraphHandler)
+	http.HandleFunc("/startSuperstep", w.startSuperstepHandler)
 	http.HandleFunc("/saveState", saveStateHandler)
-	http.HandleFunc("/incomingMsg", workerToWorkerHandler)
-	http.HandleFunc("/ping", pingHandler)
-	http.HandleFunc("/terminate", terminateHandler)
+	http.HandleFunc("/incomingMsg", w.workerToWorkerHandler)
+	http.HandleFunc("/ping", w.pingHandler)
+	http.HandleFunc("/terminate", w.terminateHandler)
 	http.ListenAndServe(":3000", nil)
+}
+
+func RunUDF(udf UDF) {
+	w := NewWorker(udf)
+	w.Run()
 }

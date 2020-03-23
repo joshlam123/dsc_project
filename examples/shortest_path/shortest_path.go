@@ -36,6 +36,5 @@ func MakeShortestPath(sourceID int) pregol.UDF {
 
 func main() {
 	shortestPath := MakeShortestPath(1)
-	pregol.SetUdf(shortestPath)
-	pregol.Run()
+	pregol.RunUDF(shortestPath)
 }
