@@ -70,6 +70,7 @@ func newGraphReader() graphReader {
 	gR := graphReader{}
 	gR.Vertices = make(map[int]vertexReader)
 	gR.Edges = make(map[int][]edgeReader)
+	gR.outQueue = make(map[int][]float64)
 	return gR
 }
 
