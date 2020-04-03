@@ -296,9 +296,7 @@ func (w *Worker) workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) 
 }
 
 func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
-	var gr graphReader
-	gr.Vertices = make(map[int]vertexReader)
-	gr.outQueue = make(map[int][]float64)
+	gr := newGraphReader()
 
 	fmt.Println("Worker in saveStateHandler.")
 
