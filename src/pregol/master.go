@@ -13,15 +13,26 @@ import (
 	"time"
 )
 
+type masterState int
+
+const (
+	SUPERSTEP masterState = iota
+	SAVESTATE
+	DEAD
+	DONE
+)
+
 // Master ...
 type Master struct {
-	numPartitions int
-	checkpoint    int
-	nodeAdrs      map[string]bool
-	activeNodes   []activeNode
-	graphsToNodes []graphReader
-	graphFile     string
-	client        *http.Client
+	numPartitions    int
+	checkpoint       int
+	nodeAdrs         map[string]bool
+	activeNodes      []activeNode
+	graphsToNodes    []graphReader
+	graphFile        string
+	client           *http.Client
+	currentIteration int
+	currentState     masterState
 }
 
 type guiSend struct {
@@ -39,6 +50,8 @@ func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string) *Master 
 	m.client = &http.Client{
 		Timeout: time.Second * 5,
 	}
+	m.currentIteration = 0
+	m.currentState = ALLFINE
 
 	dat, err := ioutil.ReadFile(ipFile)
 	if err != nil {
@@ -184,6 +197,190 @@ func (m *Master) rollback(graphFile string) {
 	m.InitConnections()
 	m.AssignPartitions(graphFile)
 	m.DisseminateGraph()
+}
+
+// ------------- State machine stuffs ---------------------
+
+func (m *Master) superstep() {
+	if m.currentIteration != 0 && m.currentIteration%m.checkpoint == 0 {
+		m.currentState = SAVESTATE
+		return
+	}
+
+	nodeDiedChan := make(chan bool, len(m.activeNodes))
+	inactiveChan := make(chan bool, len(m.activeNodes))
+
+	var wg sync.WaitGroup
+	for ip, active := range m.nodeAdrs {
+		if active {
+			wg.Add(1)
+			go func(ip string, nodeDiedChan, inactiveChan chan bool, wg *sync.WaitGroup) {
+				// Start Superstep
+				defer wg.Done()
+
+				resp, err := m.client.Get(getURL(ip, "3000", "startSuperstep"))
+				if err != nil {
+					nodeDiedChan <- true
+					return
+				}
+
+				if resp.StatusCode != http.StatusOK {
+					nodeDiedChan <- true
+					return
+				}
+
+				// Start pinging
+				for {
+					// pingResp, err2 := m.client.Get(getURL(ip, "3000", "ping"))
+					fmt.Println("Pinging", ip)
+					req, _ := http.NewRequest("POST", getURL(ip, "3000", "ping"), bytes.NewBuffer([]byte("Completed Superstep?")))
+					pingResp, err2 := m.client.Do(req)
+					if err2 != nil {
+						nodeDiedChan <- true
+						return
+					}
+
+					if pingResp.StatusCode != http.StatusOK {
+						nodeDiedChan <- true
+						return
+					}
+					defer pingResp.Body.Close()
+					bodyBytes, _ := ioutil.ReadAll(pingResp.Body)
+					fmt.Println(bodyBytes)
+					result := string(bodyBytes)
+					fmt.Println(result)
+					if result != "still not done" {
+						var activeVert []int
+						json.Unmarshal(bodyBytes, &activeVert)
+						fmt.Println(activeVert)
+						if len(activeVert) == 0 {
+							fmt.Println("No active workers")
+							inactiveChan <- true
+						} else {
+							inactiveChan <- false
+						}
+						return
+					} else {
+						fmt.Println(ip, "still busy")
+					}
+					time.Sleep(time.Second * 5)
+				}
+			}(ip, nodeDiedChan, inactiveChan, &wg)
+		}
+	}
+	fmt.Println("Waiting")
+	wg.Wait()
+	fmt.Println("Superstep completed")
+
+	// Checking for dead workers
+	nodeDied := true
+	fmt.Println("Checking for dead workers")
+	close(nodeDiedChan)
+	for ifNodeDied := range nodeDiedChan {
+		nodeDied = ifNodeDied || nodeDied
+	}
+
+	// Checking for revived nodes
+	// nodeRevivedChan := make(chan bool, len(m.nodeAdrs)-len(m.activeNodes))
+	// for ip, active := range m.nodeAdrs {
+	// 	if !active {
+	// 		wg.Add(1)
+	// 		go func(ip string, wg *sync.WaitGroup) {
+	// 			defer wg.Done()
+	// 			_, err := m.client.Get(getURL(ip, "3000", "ping"))
+	// 			if err != nil {
+	// 				return
+	// 			}
+	// 			nodeRevivedChan <- true
+	// 		}(ip, &wg)
+	// 	}
+	// }
+	// wg.Wait()
+	// close(nodeRevivedChan)
+	// for ifNodeRevived := range nodeRevivedChan {
+	// 	nodeRevived = ifNodeRevived || nodeRevived
+	// }
+
+	// Checking for active workers
+	fmt.Println("Checking for active workers")
+	close(inactiveChan)
+	allInactive := true
+	for ifAllInactive := range inactiveChan {
+		allInactive = allInactive && ifAllInactive
+	}
+
+	// Deciding next state
+	m.currentIteration++
+	if nodeDied {
+		m.currentState = DEAD
+	} else if allInactive {
+		m.currentState = DONE
+		fmt.Println("Computation has completed.")
+		for ip, active := range m.nodeAdrs {
+			if active {
+				wg.Add(1)
+				go func(ip string, wg *sync.WaitGroup) {
+					defer wg.Done()
+					m.client.Get(getURL(ip, "3000", "terminate"))
+				}(ip, &wg)
+			}
+		}
+		wg.Wait()
+	}
+}
+
+func (m *Master) saveState() {
+	graphsChan := make(chan *graphReader, len(m.activeNodes))
+	var wg sync.WaitGroup
+	for ip, active := range m.nodeAdrs {
+		if active {
+			wg.Add(1)
+			go func(ip string, wg *sync.WaitGroup, graphsChan chan *graphReader) {
+				defer wg.Done()
+
+				resp, err := m.client.Get(getURL(ip, "3000", "saveState"))
+				if err != nil {
+					return
+				}
+
+				if resp.StatusCode == http.StatusOK {
+					bodyBytes, err := ioutil.ReadAll(resp.Body) // arr of bytes
+					if err != nil {
+						panic(err)
+					}
+					gr := getGraphFromJSONByte(bodyBytes)
+					graphsChan <- gr
+				}
+			}(ip, &wg, graphsChan)
+		}
+	}
+	wg.Wait()
+	close(graphsChan)
+	saveGraph := newGraphReader()
+	for gr := range graphsChan {
+
+	}
+	m.currentState = SUPERSTEP
+}
+
+func (m *Master) dead() {
+
+}
+
+func (m *Master) Run() {
+	m.rollback(m.graphFile)
+	for {
+		switch m.currentState {
+		case SUPERSTEP:
+			m.superstep()
+		case SAVESTATE:
+			m.saveState()
+		case DEAD:
+			m.dead()
+		case DONE:
+			break
+		}
+	}
 }
 
 // Run ...
