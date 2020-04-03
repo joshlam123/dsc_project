@@ -28,7 +28,7 @@ type Worker struct {
 	inQLock        sync.RWMutex
 	outQLock       sync.RWMutex
 	activeVertLock sync.RWMutex        // ensure that one partition access activeVert variable at a time
-	pingPong       *semaphore.Weighted // flag: (A) whether superstep is completed; (B) whether initVertices is done
+	pingPong       *semaphore.Weighted // flag: (A) whether superstep is completed; (B) whether initState is done
 	busyWorker     *semaphore.Weighted // flag: Check if any goroutines are still handling incoming messages from peer workers
 }
 
@@ -45,7 +45,7 @@ func (w *Worker) Init() {
 	w.inQLock = sync.RWMutex{}
 	w.outQLock = sync.RWMutex{}
 	w.activeVertLock = sync.RWMutex{}              // ensure that one partition access activeVert variable at a time
-	w.pingPong = semaphore.NewWeighted(int64(1))   // flag: (A) whether superstep is completed; (B) whether initVertices is done
+	w.pingPong = semaphore.NewWeighted(int64(1))   // flag: (A) whether superstep is completed; (B) whether initState is done
 	w.busyWorker = semaphore.NewWeighted(int64(1)) // flag: Check if any goroutines are still handling incoming messages from peer workers
 
 	w.inQueue = make(map[int][]float64)
@@ -55,7 +55,7 @@ func (w *Worker) Init() {
 }
 
 // loadVertices loads assigned vertices received from Master
-func (w *Worker) initVertices(gr graphReader) {
+func (w *Worker) initState(gr graphReader) {
 	// create Vertices
 
 	if err := w.pingPong.Acquire(w.ctx, 1); err != nil {
@@ -66,7 +66,7 @@ func (w *Worker) initVertices(gr graphReader) {
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
 		v := Vertex{vID,
-			false,
+			vReader.Flag, //active
 			vReader.Value,
 			make([]float64, 0),
 			make(chan []float64),
@@ -77,6 +77,9 @@ func (w *Worker) initVertices(gr graphReader) {
 			w.partToVert[partID] = make(map[int]*Vertex)
 		}
 		w.partToVert[partID][vID] = &v
+		w.activeVert = gr.ActiveVerts
+		w.outQueue = gr.outQueue
+
 	}
 	fmt.Println("Done loading, releasing pingpong.")
 	printGraphReader(gr)
@@ -241,7 +244,7 @@ func (w *Worker) disseminateGraphHandler(rw http.ResponseWriter, r *http.Request
 	gr := getGraphFromJSONByte(bodyBytes)
 	w.graphReader = *gr
 
-	go w.initVertices(*gr)
+	go w.initState(*gr)
 
 	if err := w.pingPong.Acquire(w.ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v to load graph", err)
@@ -304,6 +307,7 @@ func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 		for vID, v := range vert {
 			vr := gr.Vertices[vID]
 			vr.Value = v.Val
+			vr.Flag = v.flag
 			gr.Vertices[vID] = vr
 		}
 	}

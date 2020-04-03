@@ -22,6 +22,7 @@ type infoReader struct {
 type vertexReader struct {
 	Name  string
 	Value float64
+	Flag  bool
 }
 
 type edgeReader struct {
