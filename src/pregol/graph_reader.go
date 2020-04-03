@@ -71,6 +71,7 @@ func newGraphReader() graphReader {
 	gR.Vertices = make(map[int]vertexReader)
 	gR.Edges = make(map[int][]edgeReader)
 	gR.outQueue = make(map[int][]float64)
+	gR.PartitionToNode = make(map[int]int)
 	return gR
 }
 
