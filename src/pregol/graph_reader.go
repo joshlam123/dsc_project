@@ -46,7 +46,7 @@ func printGraphReader(gr graphReader) {
 	fmt.Println("-------------")
 	fmt.Println("# Vertices:", gr.Info.NumVertices)
 
-	fmt.Println("------Initial vertex values-----")
+	fmt.Println("------Vertex values-----")
 	for vID, vert := range gr.Vertices {
 		fmt.Println("Value of Vertex: ", vID, ": ", vert.Value)
 	}

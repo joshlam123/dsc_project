@@ -66,7 +66,7 @@ func (w *Worker) initState(gr graphReader) {
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
 		v := Vertex{vID,
-			vReader.Flag, //active
+			vReader.Flag, //false = active
 			vReader.Value,
 			make([]float64, 0),
 			make(chan []float64),
@@ -79,7 +79,7 @@ func (w *Worker) initState(gr graphReader) {
 		w.partToVert[partID][vID] = &v
 		w.activeVert = gr.ActiveVerts
 		w.outQueue = gr.outQueue
-
+		w.superstep = gr.superstep
 	}
 	fmt.Println("Done loading, releasing pingpong.")
 	printGraphReader(gr)
@@ -252,7 +252,7 @@ func (w *Worker) disseminateGraphHandler(rw http.ResponseWriter, r *http.Request
 	} else {
 		defer w.pingPong.Release(1)
 		fmt.Println("Acquired Sempahore to load graph")
-		printGraphReader(*gr)
+		//printGraphReader(*gr)
 		fmt.Fprintln(rw, "ok")
 	}
 }
