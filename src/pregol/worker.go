@@ -392,7 +392,7 @@ func (w *Worker) Run() {
 	http.HandleFunc("/initConnection", initConnectionHandler)
 	http.HandleFunc("/disseminateGraph", w.disseminateGraphHandler)
 	http.HandleFunc("/startSuperstep", w.startSuperstepHandler)
-	http.HandleFunc("/saveState", saveStateHandler)
+	http.HandleFunc("/saveState", w.saveStateHandler)
 	http.HandleFunc("/incomingMsg", w.workerToWorkerHandler)
 	http.HandleFunc("/ping", w.pingHandler)
 	http.HandleFunc("/terminate", w.terminateHandler)

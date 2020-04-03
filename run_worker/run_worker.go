@@ -1,8 +1,8 @@
 package main
 
 import (
-	"dsc_project/src/pregol"
 	"fmt"
+	"pregol"
 )
 
 // MaxValue represents the Pregel program for finding the max value among all vertices
