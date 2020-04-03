@@ -57,6 +57,7 @@ func (w *Worker) Init() {
 // loadVertices loads assigned vertices received from Master
 func (w *Worker) initState(gr graphReader) {
 	// create Vertices
+	w.partToVert = make(map[int]map[int]*Vertex)
 
 	if err := w.pingPong.Acquire(w.ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
@@ -79,8 +80,8 @@ func (w *Worker) initState(gr graphReader) {
 		w.partToVert[partID][vID] = &v
 		w.activeVert = gr.ActiveVerts
 		w.outQueue = gr.outQueue
-		w.superstep = gr.superstep
 	}
+	w.superstep = gr.superstep
 	fmt.Println("Done loading, releasing pingpong.")
 	printGraphReader(gr)
 }
