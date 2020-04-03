@@ -24,12 +24,12 @@ type Worker struct {
 	graphReader graphReader
 	superstep   int
 
-	ctx context.Context
-	inQLock sync.RWMutex
-	outQLock sync.RWMutex
-	activeVertLock sync.RWMutex              // ensure that one partition access activeVert variable at a time
-	pingPong *semaphore.Weighted             // flag: (A) whether superstep is completed; (B) whether initVertices is done
-	busyWorker *semaphore.Weighted           // flag: Check if any goroutines are still handling incoming messages from peer workers
+	ctx            context.Context
+	inQLock        sync.RWMutex
+	outQLock       sync.RWMutex
+	activeVertLock sync.RWMutex        // ensure that one partition access activeVert variable at a time
+	pingPong       *semaphore.Weighted // flag: (A) whether superstep is completed; (B) whether initState is done
+	busyWorker     *semaphore.Weighted // flag: Check if any goroutines are still handling incoming messages from peer workers
 }
 
 // NewWorker creates and returns an initialized worker
@@ -45,7 +45,7 @@ func (w *Worker) Init() {
 	w.inQLock = sync.RWMutex{}
 	w.outQLock = sync.RWMutex{}
 	w.activeVertLock = sync.RWMutex{}              // ensure that one partition access activeVert variable at a time
-	w.pingPong = semaphore.NewWeighted(int64(1))   // flag: (A) whether superstep is completed; (B) whether initVertices is done
+	w.pingPong = semaphore.NewWeighted(int64(1))   // flag: (A) whether superstep is completed; (B) whether initState is done
 	w.busyWorker = semaphore.NewWeighted(int64(1)) // flag: Check if any goroutines are still handling incoming messages from peer workers
 
 	w.inQueue = make(map[int][]float64)
@@ -55,7 +55,7 @@ func (w *Worker) Init() {
 }
 
 // loadVertices loads assigned vertices received from Master
-func (w *Worker) initVertices(gr graphReader) {
+func (w *Worker) initState(gr graphReader) {
 	// create Vertices
 
 	if err := w.pingPong.Acquire(w.ctx, 1); err != nil {
@@ -66,7 +66,7 @@ func (w *Worker) initVertices(gr graphReader) {
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
 		v := Vertex{vID,
-			false,
+			vReader.Flag, //active
 			vReader.Value,
 			make([]float64, 0),
 			make(chan []float64),
@@ -77,6 +77,9 @@ func (w *Worker) initVertices(gr graphReader) {
 			w.partToVert[partID] = make(map[int]*Vertex)
 		}
 		w.partToVert[partID][vID] = &v
+		w.activeVert = gr.ActiveVerts
+		w.outQueue = gr.outQueue
+
 	}
 	fmt.Println("Done loading, releasing pingpong.")
 	printGraphReader(gr)
@@ -241,7 +244,7 @@ func (w *Worker) disseminateGraphHandler(rw http.ResponseWriter, r *http.Request
 	gr := getGraphFromJSONByte(bodyBytes)
 	w.graphReader = *gr
 
-	go w.initVertices(*gr)
+	go w.initState(*gr)
 
 	if err := w.pingPong.Acquire(w.ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v to load graph", err)
@@ -291,16 +294,35 @@ func (w *Worker) workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) 
 	}(bodyBytes)
 }
 
-func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
+func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 	var gr graphReader
+	gr.Vertices = make(map[int]vertexReader)
+	gr.outQueue = make(map[int][]float64)
 
-	// decode json body into graphReader struct
-	// TODO: consider format of saving state
-	err := json.NewDecoder(r.Body).Decode(&gr)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
+	fmt.Println("Worker in saveStateHandler.")
+
+	gr.outQueue = w.outQueue
+
+	for _, vert := range w.partToVert {
+		for vID, v := range vert {
+			vr := gr.Vertices[vID]
+			vr.Value = v.Val
+			vr.Flag = v.flag
+			gr.Vertices[vID] = vr
+		}
 	}
+
+	gr.superstep = w.superstep
+	fmt.Println(gr.superstep)
+	gr.ActiveVerts = w.activeVert
+	fmt.Println(gr.ActiveVerts)
+	fmt.Println("Sending checkpoint to master: ")
+	printGraphReader(gr)
+
+	bytes, _ := json.Marshal(&gr)
+	fmt.Println(string(bytes), len(bytes))
+	rw.Write(bytes)
+	fmt.Println("Sending saved state to master.")
 
 	// TODO: parse json to send to Master - graphReader and In/Out Queue
 
@@ -371,7 +393,7 @@ func (w *Worker) Run() {
 	http.HandleFunc("/initConnection", initConnectionHandler)
 	http.HandleFunc("/disseminateGraph", w.disseminateGraphHandler)
 	http.HandleFunc("/startSuperstep", w.startSuperstepHandler)
-	http.HandleFunc("/saveState", saveStateHandler)
+	http.HandleFunc("/saveState", w.saveStateHandler)
 	http.HandleFunc("/incomingMsg", w.workerToWorkerHandler)
 	http.HandleFunc("/ping", w.pingHandler)
 	http.HandleFunc("/terminate", w.terminateHandler)

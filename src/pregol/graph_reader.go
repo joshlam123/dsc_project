@@ -22,6 +22,7 @@ type infoReader struct {
 type vertexReader struct {
 	Name  string
 	Value float64
+	Flag  bool
 }
 
 type edgeReader struct {
@@ -35,6 +36,9 @@ type graphReader struct {
 	Edges           map[int][]edgeReader
 	PartitionToNode map[int]int
 	ActiveNodes     []activeNode
+	outQueue        map[int][]float64 // worker ID to outQueue map
+	superstep       int
+	ActiveVerts     []int
 }
 
 func printGraphReader(gr graphReader) {
