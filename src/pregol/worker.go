@@ -24,12 +24,12 @@ type Worker struct {
 	graphReader graphReader
 	superstep   int
 
-	ctx context.Context
-	inQLock sync.RWMutex
-	outQLock sync.RWMutex
-	activeVertLock sync.RWMutex              // ensure that one partition access activeVert variable at a time
-	pingPong *semaphore.Weighted             // flag: (A) whether superstep is completed; (B) whether initVertices is done
-	busyWorker *semaphore.Weighted           // flag: Check if any goroutines are still handling incoming messages from peer workers
+	ctx            context.Context
+	inQLock        sync.RWMutex
+	outQLock       sync.RWMutex
+	activeVertLock sync.RWMutex        // ensure that one partition access activeVert variable at a time
+	pingPong       *semaphore.Weighted // flag: (A) whether superstep is completed; (B) whether initVertices is done
+	busyWorker     *semaphore.Weighted // flag: Check if any goroutines are still handling incoming messages from peer workers
 }
 
 // NewWorker creates and returns an initialized worker
@@ -291,7 +291,7 @@ func (w *Worker) workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) 
 	}(bodyBytes)
 }
 
-func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
+func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 	var gr graphReader
 
 	// decode json body into graphReader struct
@@ -301,6 +301,27 @@ func saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	nodeID := w.graphReader.Info.NodeID
+
+	if _, ok := gr.outQueue[nodeID]; !ok {
+		gr.outQueue[nodeID] = w.outQueue
+	}
+
+	for _, vert := range w.partToVert {
+		for vID, v := range vert {
+			vr := gr.Vertices[vID]
+			vr.Value = v.Val
+			gr.Vertices[vID] = vr
+		}
+	}
+
+	gr.superstep = w.superstep
+	gr.ActiveVerts = w.activeVert
+
+	bytes, _ := json.Marshal(&gr)
+	rw.Write(bytes)
+	fmt.Println("Sending saved state to master.")
 
 	// TODO: parse json to send to Master - graphReader and In/Out Queue
 

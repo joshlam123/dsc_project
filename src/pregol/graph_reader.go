@@ -37,6 +37,7 @@ type graphReader struct {
 	ActiveNodes     []activeNode
 	outQueue        map[int]map[int][]float64 // worker ID to outQueue map
 	superstep       int
+	ActiveVerts     []int
 }
 
 func printGraphReader(gr graphReader) {
