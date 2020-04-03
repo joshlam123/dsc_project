@@ -35,6 +35,8 @@ type graphReader struct {
 	Edges           map[int][]edgeReader
 	PartitionToNode map[int]int
 	ActiveNodes     []activeNode
+	outQueue        map[int]map[int][]float64 // worker ID to outQueue map
+	superstep       int
 }
 
 func printGraphReader(gr graphReader) {
