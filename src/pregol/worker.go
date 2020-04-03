@@ -293,20 +293,12 @@ func (w *Worker) workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) 
 
 func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 	var gr graphReader
+	gr.Vertices = make(map[int]vertexReader)
+	gr.outQueue = make(map[int][]float64)
 
-	// decode json body into graphReader struct
-	// TODO: consider format of saving state
-	err := json.NewDecoder(r.Body).Decode(&gr)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
+	fmt.Println("Worker in saveStateHandler.")
 
-	nodeID := w.graphReader.Info.NodeID
-
-	if _, ok := gr.outQueue[nodeID]; !ok {
-		gr.outQueue[nodeID] = w.outQueue
-	}
+	gr.outQueue = w.outQueue
 
 	for _, vert := range w.partToVert {
 		for vID, v := range vert {
@@ -317,9 +309,14 @@ func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	gr.superstep = w.superstep
+	fmt.Println(gr.superstep)
 	gr.ActiveVerts = w.activeVert
+	fmt.Println(gr.ActiveVerts)
+	fmt.Println("Sending checkpoint to master: ")
+	printGraphReader(gr)
 
 	bytes, _ := json.Marshal(&gr)
+	fmt.Println(string(bytes), len(bytes))
 	rw.Write(bytes)
 	fmt.Println("Sending saved state to master.")
 
