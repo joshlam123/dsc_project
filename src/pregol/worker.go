@@ -57,6 +57,7 @@ func (w *Worker) Init() {
 // loadVertices loads assigned vertices received from Master
 func (w *Worker) initState(gr graphReader) {
 	// create Vertices
+	w.partToVert = make(map[int]map[int]*Vertex)
 
 	if err := w.pingPong.Acquire(w.ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
@@ -66,7 +67,7 @@ func (w *Worker) initState(gr graphReader) {
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
 		v := Vertex{vID,
-			vReader.Flag, //active
+			vReader.Flag, //false = active
 			vReader.Value,
 			make([]float64, 0),
 			make(chan []float64),
@@ -79,8 +80,8 @@ func (w *Worker) initState(gr graphReader) {
 		w.partToVert[partID][vID] = &v
 		w.activeVert = gr.ActiveVerts
 		w.outQueue = gr.outQueue
-
 	}
+	w.superstep = gr.superstep
 	fmt.Println("Done loading, releasing pingpong.")
 	printGraphReader(gr)
 }
@@ -252,7 +253,7 @@ func (w *Worker) disseminateGraphHandler(rw http.ResponseWriter, r *http.Request
 	} else {
 		defer w.pingPong.Release(1)
 		fmt.Println("Acquired Sempahore to load graph")
-		printGraphReader(*gr)
+		//printGraphReader(*gr)
 		fmt.Fprintln(rw, "ok")
 	}
 }
@@ -295,9 +296,7 @@ func (w *Worker) workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) 
 }
 
 func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
-	var gr graphReader
-	gr.Vertices = make(map[int]vertexReader)
-	gr.outQueue = make(map[int][]float64)
+	gr := newGraphReader()
 
 	fmt.Println("Worker in saveStateHandler.")
 
