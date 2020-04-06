@@ -167,7 +167,6 @@ func (m *Master) DisseminateGraph() {
 		go func(ip string, wg *sync.WaitGroup, graphToSend graphReader) {
 			defer wg.Done()
 
-			c := &http.Client{}
 			req, err := http.NewRequest("POST", getURL(ip, "disseminateGraph"), bytes.NewBuffer(getJSONByteFromGraph(graphToSend)))
 
 			if err != nil {
@@ -175,7 +174,7 @@ func (m *Master) DisseminateGraph() {
 			}
 
 			// resp, err2 := m.client.Do(req)
-			resp, err2 := c.Do(req)
+			resp, err2 := m.client.Do(req)
 
 			if err2 != nil {
 				panic(err2)
@@ -184,7 +183,7 @@ func (m *Master) DisseminateGraph() {
 			defer resp.Body.Close()
 
 			if resp.StatusCode == http.StatusOK {
-				fmt.Println("%s %s %s", "Machine", strings.TrimSpace(ip), "received graph.")
+				fmt.Println("Machine", strings.TrimSpace(ip), "received graph.")
 			}
 		}(aNode.IP, &wg, m.graphsToNodes[idx])
 	}
