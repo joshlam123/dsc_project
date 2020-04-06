@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"pregol"
 )
 
@@ -38,6 +39,6 @@ func MaxValue(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 }
 
 func main() {
-	ports := []int{3001, 3000, 3002}
+	ports := os.Args[1:]
 	pregol.RunUDF(MaxValue, ports)
 }

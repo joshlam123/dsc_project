@@ -388,7 +388,7 @@ func (w *Worker) terminateHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 // Run ...
-func (w *Worker) Run(ports []int) {
+func (w *Worker) Run(ports []string) {
 	http.HandleFunc("/initConnection", initConnectionHandler)
 	http.HandleFunc("/disseminateGraph", w.disseminateGraphHandler)
 	http.HandleFunc("/startSuperstep", w.startSuperstepHandler)
@@ -407,7 +407,7 @@ func (w *Worker) Run(ports []int) {
 }
 
 // RunUDF creates a new worker with the given UDF and runs the worker
-func RunUDF(udf UDF, ports []int) {
+func RunUDF(udf UDF, ports []string) {
 	w := NewWorker(udf)
 	w.Run(ports)
 }
