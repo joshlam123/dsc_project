@@ -51,7 +51,3 @@ func (v *Vertex) VoteToHalt() ResultMsg {
 	var m map[int]float64
 	return ResultMsg{v.Id, true, m}
 }
-
-func main() {
-	fmt.Println("hello world")
-}
