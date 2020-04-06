@@ -76,14 +76,14 @@ func (w *Worker) initState(gr graphReader) {
 			make(map[int]float64),
 			gr.Edges[vID]}
 
-		if w.ID == gr.PartitionToNode[partID] {
+		// if w.ID == gr.PartitionToNode[partID] {
 			if _, ok := w.partToVert[partID]; !ok {
 				w.partToVert[partID] = make(map[int]*Vertex)
 			}
 			w.partToVert[partID][vID] = &v
 			w.activeVert = gr.ActiveVerts
 			w.outQueue = gr.outQueue
-		}
+		// }
 	}
 	w.superstep = gr.superstep
 	fmt.Println("Done loading, releasing pingpong.")
@@ -112,7 +112,9 @@ func (w *Worker) startSuperstep() {
 	w.activeVert = make([]int, 0)
 
 	var wg sync.WaitGroup
-	for _, vList := range w.partToVert {
+	for pid, vList := range w.partToVert {
+	
+		if w.ID == w.graphReader.PartitionToNode[pid] {
 		wg.Add(1)                        // add waitGroup for each partition: vertex list
 		go func(vList map[int]*Vertex) { // for each partition, launch go routine to call compute for each of its vertex
 			defer wg.Done()
@@ -124,6 +126,7 @@ func (w *Worker) startSuperstep() {
 				fmt.Println("Populating out queue with computed value for vertex: ", v.Id)
 			}
 		}(vList)
+		}
 	}
 	wg.Wait()
 	w.inQueue = make(map[int][]float64)

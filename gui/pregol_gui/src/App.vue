@@ -4,14 +4,9 @@
      <div class="row">
        <div id="sidebar" class="col-md-3 col-sm-4 col-xs-12 sidebar">
          <div id="search">
-           <input
-             id="location-input"
-             type="text"
-             ref="input"
-             placeholder="Location?"
-             @keyup.enter="organizeAllDetails">
+           
 
-<button id="search-btn" @click="organizeAllDetails">
+        <button id="search-btn" @click="organizeAllDetails">
              <img src="./assets/Search.svg" width="24" height="24">
            </button>
          </div>
@@ -19,66 +14,59 @@
 
            <div class="wrapper-left pt-4 pb-2 text-center">
            <span>Graph Name:</span>
-           <i>▼</i>
              <div id="current-weather">
-               {{ currentWeather.temp }}
+               {{ name }}
              </div>
 
             <span>User Defined Function:</span>
-           <i>▼</i>
+
              <div id="current-weather">
-               {{ currentWeather.temp }}
+               {{ funcName }}
+             </div>
+
+           <span>Size of Graph:</span>
+                 
+               </div>
+               <div id="min-summary"> {{ graphSize }}</div>
              </div>
 
            <span>Nodes Processed:</span>
-           <i>▼</i>
+
              <div id="current-weather">
-               {{ currentWeather.temp }}
+               {{ currentProgress.nodeProgress }}
              </div>
 
-             <div id="weather-desc">{{ currentWeather.summary }}</div>
+             <div id="weather-desc">{{ currentProgress.summary }}</div>
              <div class="temp-max-min">
                <div class="max-desc">
                <span># Active Nodes:</span>
-               <i>10</i>
+               {{ currentProgress.activeNode }}
                </div>
 
                <div class="min-desc">
                  <div id="min-detail">
-                 <span>Size of Graph:</span>
-                   <i>▼</i>
-                   {{ currentWeather.todayHighLow.todayTempLow }}
+                 <span>Number of Partitions:</span>
                  </div>
-                 <div id="min-summary">at {{ currentWeather.todayHighLow.todayTempLowTime }}</div>
+                 <div id="min-summary"> {{ currentProgress.numPartitions }} </div>
                </div>
-             </div>
-           </div>
+
+
            <div class="wrapper-right">
-             <div class="date-time-info">
-               <div id="date-desc">
-                 <img src="./assets/calendar.svg" width="20" height="20">
-                 {{ currentWeather.time }}
-               </div>
-             </div>
-             <div class="location-info">
-               <div id="location-desc">
-                 <img
-                   src="./assets/location.svg"
-                   width="10.83"
-                   height="15.83"
-                   style="opacity: 0.9;"
-                 >
-                 {{ currentWeather.full_location }}
-                 <div id="location-detail" class="mt-1">
-                   Lat: {{ currentWeather.formatted_lat }}
-                   <br>
-                   Long: {{ currentWeather.formatted_long }}
-                 </div>
-               </div>
-             </div>
+
+           &nbsp;
+           <div>
+           <button id="search-btn" @click="organizeAllDetails">
+             Refresh 
+           </button>
+
            </div>
-         </div>
+            </div>
+
+           </div>
+           
        </div>
+
+
        <dashboard-content
          class="col-md-9 col-sm-8 col-xs-12 content"
          id="dashboard-content"
@@ -86,14 +74,15 @@
          :tempVar="tempVar">
 
        </dashboard-content>
+       </div>
      </div>
    </div>
- </div>
+
 </template>
 
 <script>
 import Content from './components/Content.vue'
-
+import axios from 'axios';
 
 export default {
   name: 'app',
@@ -102,26 +91,17 @@ export default {
   },
   data() {
    return {
-     weatherDetails: false,
-     location: '', // raw location from input
-     lat: '', // raw latitude from google maps api response
-     long: '', // raw longitude from google maps api response
-     completeWeatherApi: '', // weather api string with lat and long
-     rawWeatherData: '', // raw response from weather api
-     currentWeather: {
-       full_location: '', // for full address
-       formatted_lat: '', // for N/S
-       formatted_long: '', // for E/W
-       time: '',
-       temp: '',
-       todayHighLow: {
-         todayTempHigh: '',
-         todayTempHighTime: '',
-         todayTempLow: '',
-         todayTempLowTime: ''
-       },
-       summary: '',
-       possibility: ''
+
+     name: '',
+     funcName: '',
+     graphSize: '',
+     
+     currentProgress: {
+       nodeProgress: '',
+       activeNode: '',
+       numPartitions: '',
+
+
      },
      tempVar: {
        tempToday: [
