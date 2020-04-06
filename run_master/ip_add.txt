@@ -1,3 +1,10 @@
 localhost:3000
 localhost:3001
 localhost:3002
+localhost:4000
+localhost:4001
+localhost:4002
+10.12.214.190:3000
+10.12.211.121:3000
+10.12.178.74:3000
+10.12.34.191:3000

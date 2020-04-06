@@ -3,7 +3,8 @@ package main
 import ("math/rand"
 		"net/http"
 		"encoding/json"
-		"fmt")
+		"fmt"
+		"pregol")
 
 
 // the types of data needed by the master to disseminate into the graph are:
@@ -46,7 +47,7 @@ func sendGraphStats (w http.ResponseWriter, request *http.Request) {
 
 	// response := processMasterData(mRecv)
 	response := T{numNodes:len(mRecv.m.nodeAdrs), numPartitions:mRecv.m.numPartitions, activeVertices:m.activeVertices, 
-			computeProgress: ?????, currentSuperStep: mRecv.iter, costFn: ?????, activeNodes: mRecv.m.activeNodes,
+			computeProgress: ?????, currentSuperStep: mRecv.checkpoint, costFn: ?????, activeNodes: mRecv.m.activeNodes,
 			 graphSize:}
 	// fmt.Println(response)
 
