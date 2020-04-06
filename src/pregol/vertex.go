@@ -23,6 +23,7 @@ type UDF func(vertex *Vertex, superstep int) (bool, map[int]float64)
 func (v *Vertex) SetInEdge(newVal []float64) {
 	fmt.Println(v.InEdges)
 	//v.InEdges = append(v.InEdges, newVal...)
+
 	for _, i := range newVal {
 		v.InEdges = append(v.InEdges, i)
 	}

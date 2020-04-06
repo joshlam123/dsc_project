@@ -60,6 +60,7 @@ func (w *Worker) Init() {
 func (w *Worker) initState(gr graphReader) {
 	// create Vertices
 	w.partToVert = make(map[int]map[int]*Vertex)
+	w.inQueue = make(map[int][]float64)
 
 	if err := w.pingPong.Acquire(w.ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v", err)
@@ -82,9 +83,16 @@ func (w *Worker) initState(gr graphReader) {
 			w.partToVert[partID] = make(map[int]*Vertex)
 		}
 		w.partToVert[partID][vID] = &v
-		w.activeVert = gr.ActiveVerts
-		w.outQueue = gr.OutQueue
+		//w.activeVert = gr.ActiveVerts
+		//w.outQueue = gr.OutQueue
 	}
+
+	w.activeVert = gr.ActiveVerts
+	w.outQueue = gr.OutQueue
+	if len(w.outQueue) != 0 {
+		w.disseminateMsgFromOutQ()
+	}
+
 	w.superstep = gr.Superstep
 	fmt.Println("Done loading, releasing pingpong.")
 	printGraphReader(gr)
@@ -102,7 +110,6 @@ func (w *Worker) startSuperstep() {
 		if _, ok := w.partToVert[partID][vID]; !ok {
 			fmt.Println("not ok")
 		}
-
 		w.partToVert[partID][vID].SetInEdge(val)
 	}
 
@@ -112,22 +119,22 @@ func (w *Worker) startSuperstep() {
 	w.activeVert = make([]int, 0)
 
 	var wg sync.WaitGroup
-	for pid, vList := range w.partToVert {
+	for _, vList := range w.partToVert {
 
-		if w.ID == w.graphReader.PartitionToNode[pid] {
-			wg.Add(1)                        // add waitGroup for each partition: vertex list
-			go func(vList map[int]*Vertex) { // for each partition, launch go routine to call compute for each of its vertex
-				defer wg.Done()
-				for _, v := range vList { // for each vertex in partition, compute().
-					fmt.Println("Computing for vertice: ", v.Id)
-					resultmsg := v.Compute(w.udf, w.superstep)
-					fmt.Println("Finished computing for vertice: ", v.Id)
-					w.processVertResult(resultmsg) // populate OutQueue with return value of compute()
-					fmt.Println("Populating out queue with computed value for vertex: ", v.Id)
-				}
-			}(vList)
-		}
+		//if w.ID == w.graphReader.PartitionToNode[pid] {
+		wg.Add(1)                        // add waitGroup for each partition: vertex list
+		go func(vList map[int]*Vertex) { // for each partition, launch go routine to call compute for each of its vertex
+			defer wg.Done()
+			for _, v := range vList { // for each vertex in partition, compute().
+				fmt.Println("Computing for vertice: ", v.Id)
+				resultmsg := v.Compute(w.udf, w.superstep)
+				fmt.Println("Finished computing for vertice: ", v.Id)
+				w.processVertResult(resultmsg) // populate OutQueue with return value of compute()
+				fmt.Println("Populating out queue with computed value for vertex: ", v.Id)
+			}
+		}(vList)
 	}
+	//}
 	wg.Wait()
 	w.inQueue = make(map[int][]float64)
 
@@ -329,7 +336,7 @@ func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 	printGraphReader(gr)
 
 	bytes, _ := json.Marshal(&gr)
-	fmt.Println(string(bytes), len(bytes))
+	//fmt.Println(string(bytes), len(bytes))
 	rw.Write(bytes)
 	fmt.Println("Sending saved state to master.")
 
