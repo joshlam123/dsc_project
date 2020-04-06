@@ -49,7 +49,7 @@ func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string) *Master 
 	m.activeNodes = make([]activeNode, 0)
 	m.graphFile = graphFile
 	m.client = &http.Client{
-		Timeout: time.Second * 5,
+		Timeout: time.Second * 10,
 	}
 	m.currentIteration = 0
 	dat, err := ioutil.ReadFile(ipFile)
@@ -65,7 +65,7 @@ func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string) *Master 
 }
 
 // InitConnections Initializes connections with all machines via ip addresses found in nodeAdrs []string.
-// Generates a list of activeNodes which are the machines that Master will request to start superstep.
+// Generates a list of activeNodes which are the machines that Master will request to start Superstep.
 func (m *Master) InitConnections() {
 
 	var wg sync.WaitGroup
@@ -133,7 +133,7 @@ func (m *Master) AssignPartitions(graphFile string) {
 		m.graphsToNodes[i].Info.NumPartitions = m.numPartitions
 		m.graphsToNodes[i].ActiveNodes = m.activeNodes
 		m.graphsToNodes[i].PartitionToNode = g.PartitionToNode
-		m.graphsToNodes[i].superstep = m.currentIteration
+		m.graphsToNodes[i].Superstep = m.currentIteration
 	}
 
 	// Loop through all vertices
@@ -143,8 +143,8 @@ func (m *Master) AssignPartitions(graphFile string) {
 		cNode := partitionIdx % len(m.activeNodes)
 		m.graphsToNodes[cNode].Vertices[k] = v
 		m.graphsToNodes[cNode].Edges[k] = g.Edges[k]
-		if _, ok := g.outQueue[k]; ok {
-			m.graphsToNodes[cNode].outQueue[k] = g.outQueue[k]
+		if _, ok := g.OutQueue[k]; ok {
+			m.graphsToNodes[cNode].OutQueue[k] = g.OutQueue[k]
 		}
 	}
 
@@ -212,7 +212,7 @@ func (m *Master) rollback(graphFile string) {
 // ------------- State machine stuffs ---------------------
 
 func (m *Master) superstep() (bool, bool) {
-	fmt.Println("Starting superstep", m.currentIteration)
+	fmt.Println("Starting Superstep", m.currentIteration)
 	nodeDiedChan := make(chan bool, len(m.activeNodes))
 	inactiveChan := make(chan bool, len(m.activeNodes))
 
@@ -264,7 +264,7 @@ func (m *Master) superstep() (bool, bool) {
 			}(ip, nodeDiedChan, inactiveChan, &wg)
 		}
 	}
-	fmt.Println("Waiting for superstep to end")
+	fmt.Println("Waiting for Superstep to end")
 	wg.Wait()
 	fmt.Println("Superstep", m.currentIteration, "end")
 
@@ -348,11 +348,11 @@ func (m *Master) saveState() {
 			}
 			saveGraph.Edges[id] = append(saveGraph.Edges[id], erList...)
 		}
-		for id, outQ := range gr.outQueue {
-			if _, ok := saveGraph.outQueue[id]; !ok {
-				saveGraph.outQueue[id] = make([]float64, 0)
+		for id, outQ := range gr.OutQueue {
+			if _, ok := saveGraph.OutQueue[id]; !ok {
+				saveGraph.OutQueue[id] = make([]float64, 0)
 			}
-			saveGraph.outQueue[id] = append(saveGraph.outQueue[id], outQ...)
+			saveGraph.OutQueue[id] = append(saveGraph.OutQueue[id], outQ...)
 		}
 	}
 	saveFile := getJSONByteFromGraph(saveGraph)
@@ -442,7 +442,7 @@ func (m *Master) Run() {
 // 					if active {
 // 						wg2.Add(1)
 // 						go func(ip string, wg *sync.WaitGroup) {
-// 							// TODO: Start superstep
+// 							// TODO: Start Superstep
 // 							defer wg.Done()
 
 // 							resp, err := m.client.Get(getURL(ip, "3000", "saveState"))
@@ -475,7 +475,7 @@ func (m *Master) Run() {
 // 					if active {
 // 						wg.Add(1)
 // 						go func(ip string, nodeDiedChan, inactiveChan chan bool, wg *sync.WaitGroup) {
-// 							// TODO: Start superstep
+// 							// TODO: Start Superstep
 // 							defer wg.Done()
 
 // 							resp, err := m.client.Get(getURL(ip, "3000", "startSuperstep"))
