@@ -405,9 +405,9 @@ func (m *Master) done() {
 	}
 	wg.Wait()
 
-	// if _, err := os.Stat(checkpointPATH); err == nil {
-	// 	os.Remove(checkpointPATH)
-	// }
+	if _, err := os.Stat(checkpointPATH); err == nil {
+		os.Remove(checkpointPATH)
+	}
 }
 
 func (m *Master) Run() {
