@@ -38,5 +38,6 @@ func MaxValue(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 }
 
 func main() {
-	pregol.RunUDF(MaxValue)
+	ports := []int{3001, 3000, 3002}
+	pregol.RunUDF(MaxValue, ports)
 }

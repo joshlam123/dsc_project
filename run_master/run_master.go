@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	m := pregol.NewMaster(5, 10, "ip_add.txt", "example.json")
+	m := pregol.NewMaster(6, 1, "ip_add.txt", "../examples/data/unweighted/prob/rand100.json")
 	m.Run()
 }

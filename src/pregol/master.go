@@ -34,7 +34,6 @@ type Master struct {
 	graphFile        string
 	client           *http.Client
 	currentIteration int
-	currentState     masterState
 }
 
 type guiSend struct {
@@ -53,8 +52,6 @@ func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string) *Master 
 		Timeout: time.Second * 5,
 	}
 	m.currentIteration = 0
-	m.currentState = SUPERSTEP
-
 	dat, err := ioutil.ReadFile(ipFile)
 	if err != nil {
 		panic(err)
@@ -80,7 +77,7 @@ func (m *Master) InitConnections() {
 		go func(ip string, wg *sync.WaitGroup, activeNodeChan chan activeNode) {
 			defer wg.Done()
 
-			resp, err := m.client.Get(getURL(ip, "3000", "initConnection"))
+			resp, err := m.client.Get(getURL(ip, "initConnection"))
 			if err != nil {
 				return
 			}
@@ -170,7 +167,7 @@ func (m *Master) DisseminateGraph() {
 			defer wg.Done()
 
 			c := &http.Client{}
-			req, err := http.NewRequest("POST", getURL(ip, "3000", "disseminateGraph"), bytes.NewBuffer(getJSONByteFromGraph(graphToSend)))
+			req, err := http.NewRequest("POST", getURL(ip, "disseminateGraph"), bytes.NewBuffer(getJSONByteFromGraph(graphToSend)))
 
 			if err != nil {
 				panic(err)
@@ -201,8 +198,8 @@ func (m *Master) DisseminateGraph() {
 	wg.Wait()
 }
 
-func getURL(ip, port, path string) string {
-	return "http://" + strings.TrimSpace(ip) + ":" + port + "/" + path
+func getURL(address, path string) string {
+	return "http://" + strings.TrimSpace(address) + "/" + path
 }
 
 // getPartition Get the partition which a vertex belongs to.
@@ -220,7 +217,7 @@ func (m *Master) rollback(graphFile string) {
 
 // ------------- State machine stuffs ---------------------
 
-func (m *Master) superstep() {
+func (m *Master) superstep() (bool, bool) {
 	nodeDiedChan := make(chan bool, len(m.activeNodes))
 	inactiveChan := make(chan bool, len(m.activeNodes))
 
@@ -232,7 +229,7 @@ func (m *Master) superstep() {
 				// Start Superstep
 				defer wg.Done()
 
-				resp, err := m.client.Get(getURL(ip, "3000", "startSuperstep"))
+				resp, err := m.client.Get(getURL(ip, "startSuperstep"))
 				if err != nil {
 					nodeDiedChan <- true
 					return
@@ -247,7 +244,7 @@ func (m *Master) superstep() {
 				for {
 					// pingResp, err2 := m.client.Get(getURL(ip, "3000", "ping"))
 					fmt.Println("Pinging", ip)
-					req, _ := http.NewRequest("POST", getURL(ip, "3000", "ping"), bytes.NewBuffer([]byte("Completed Superstep?")))
+					req, _ := http.NewRequest("POST", getURL(ip, "ping"), bytes.NewBuffer([]byte("Completed Superstep?")))
 					pingResp, err2 := m.client.Do(req)
 					if err2 != nil {
 						nodeDiedChan <- true
@@ -322,18 +319,7 @@ func (m *Master) superstep() {
 	for ifAllInactive := range inactiveChan {
 		allInactive = allInactive && ifAllInactive
 	}
-	// Deciding next state
-	m.currentIteration++
-	if nodeDied {
-		m.currentState = DEAD
-	} else if allInactive {
-		m.currentState = DONE
-	} else {
-		m.currentState = SUPERSTEP
-		if m.currentIteration != 0 && m.currentIteration%m.checkpoint == 0 {
-			m.saveState()
-		}
-	}
+	return nodeDied, allInactive
 }
 
 func (m *Master) saveState() {
@@ -346,7 +332,7 @@ func (m *Master) saveState() {
 			go func(ip string, wg *sync.WaitGroup, graphsChan chan *graphReader) {
 				defer wg.Done()
 
-				resp, err := m.client.Get(getURL(ip, "3000", "saveState"))
+				resp, err := m.client.Get(getURL(ip, "saveState"))
 				if err != nil {
 					return
 				}
@@ -387,7 +373,6 @@ func (m *Master) saveState() {
 	}
 	saveFile := getJSONByteFromGraph(saveGraph)
 	ioutil.WriteFile(checkpointPATH, saveFile, 0644)
-	m.currentState = SUPERSTEP
 }
 
 func (m *Master) dead() {
@@ -397,7 +382,6 @@ func (m *Master) dead() {
 		m.rollback(m.graphFile)
 	}
 	m.currentIteration -= m.currentIteration % m.checkpoint
-	m.currentState = SUPERSTEP
 }
 
 func (m *Master) done() {
@@ -408,7 +392,7 @@ func (m *Master) done() {
 			wg.Add(1)
 			go func(ip string, wg *sync.WaitGroup) {
 				defer wg.Done()
-				m.client.Get(getURL(ip, "3000", "terminate"))
+				m.client.Get(getURL(ip, "terminate"))
 			}(ip, &wg)
 		}
 	}
@@ -420,13 +404,26 @@ func (m *Master) done() {
 }
 
 func (m *Master) Run() {
+	currentState := SUPERSTEP
 	m.rollback(m.graphFile)
 	for {
-		switch m.currentState {
+		switch currentState {
 		case SUPERSTEP:
-			m.superstep()
+			nodeDied, allInactive := m.superstep()
+			m.currentIteration++
+			if nodeDied {
+				currentState = DEAD
+			} else if allInactive {
+				currentState = DONE
+			} else {
+				currentState = SUPERSTEP
+				if m.currentIteration != 0 && m.currentIteration%m.checkpoint == 0 {
+					m.saveState()
+				}
+			}
 		case DEAD:
 			m.dead()
+			currentState = SUPERSTEP
 		case DONE:
 			m.done()
 			return
