@@ -26,12 +26,12 @@ const (
 
 // Master ...
 type Master struct {
-	numPartitions    int
-	checkpoint       int
-	nodeAdrs         map[string]bool
+	numPartitions    int             // Number of partitions
+	checkpoint       int             // Number of supersteps before reaching a checkpoint
+	nodeAdrs         map[string]bool //
 	activeNodes      []activeNode
 	graphsToNodes    []graphReader
-	graphFile        string
+	graphFile        string //
 	client           *http.Client
 	currentIteration int
 }
@@ -70,6 +70,7 @@ func (m *Master) InitConnections() {
 
 	var wg sync.WaitGroup
 	activeNodeChan := make(chan activeNode, len(m.nodeAdrs))
+	fmt.Println("Initiating connection with:")
 	for ip := range m.nodeAdrs {
 		wg.Add(1)
 
@@ -84,15 +85,8 @@ func (m *Master) InitConnections() {
 
 			defer resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
-				fmt.Println("Machine", ip, "connected.")
+				fmt.Println("Machine", strings.TrimSpace(ip), "connected")
 				activeNodeChan <- activeNode{ip, make([]int, 0)}
-
-				// bodyBytes, err := ioutil.ReadAll(resp.Body)
-				// if err != nil {
-				// 	log.Fatal(err)
-				// }
-				// bodyString := string(bodyBytes)
-				// fmt.Println(bodyString)
 			}
 		}(ip, &wg, activeNodeChan)
 
@@ -190,14 +184,7 @@ func (m *Master) DisseminateGraph() {
 			defer resp.Body.Close()
 
 			if resp.StatusCode == http.StatusOK {
-				fmt.Println("Machine", ip, "received graph.")
-
-				// bodyBytes, err := ioutil.ReadAll(resp.Body)
-				// if err != nil {
-				// 	log.Fatal(err)
-				// }
-				// bodyString := string(bodyBytes)
-				// fmt.Println(bodyString)
+				fmt.Println("%s %s %s", "Machine", strings.TrimSpace(ip), "received graph.")
 			}
 		}(aNode.IP, &wg, m.graphsToNodes[idx])
 	}
@@ -225,6 +212,7 @@ func (m *Master) rollback(graphFile string) {
 // ------------- State machine stuffs ---------------------
 
 func (m *Master) superstep() (bool, bool) {
+	fmt.Println("Starting superstep", m.currentIteration)
 	nodeDiedChan := make(chan bool, len(m.activeNodes))
 	inactiveChan := make(chan bool, len(m.activeNodes))
 
@@ -249,50 +237,39 @@ func (m *Master) superstep() (bool, bool) {
 
 				// Start pinging
 				for {
-					// pingResp, err2 := m.client.Get(getURL(ip, "3000", "ping"))
-					fmt.Println("Pinging", ip)
+					fmt.Println("Pinging", strings.TrimSpace(ip))
 					req, _ := http.NewRequest("POST", getURL(ip, "ping"), bytes.NewBuffer([]byte("Completed Superstep?")))
 					pingResp, err2 := m.client.Do(req)
-					if err2 != nil {
-						nodeDiedChan <- true
-						return
-					}
-
-					if pingResp.StatusCode != http.StatusOK {
+					if err2 != nil || pingResp.StatusCode != http.StatusOK {
 						nodeDiedChan <- true
 						return
 					}
 					defer pingResp.Body.Close()
 					bodyBytes, _ := ioutil.ReadAll(pingResp.Body)
-					fmt.Println(bodyBytes)
 					result := string(bodyBytes)
-					fmt.Println(result)
 					if result != "still not done" {
 						var activeVert []int
 						json.Unmarshal(bodyBytes, &activeVert)
-						fmt.Println(activeVert)
+						fmt.Println("Active vertices from", strings.TrimSpace(ip), ":", activeVert)
 						if len(activeVert) == 0 {
-							fmt.Println("No active workers")
 							inactiveChan <- true
 						} else {
 							inactiveChan <- false
 						}
 						return
-					} else {
-						fmt.Println(ip, "still busy")
 					}
+					fmt.Println(strings.TrimSpace(ip), "is still busy")
 					time.Sleep(time.Second * 5)
 				}
 			}(ip, nodeDiedChan, inactiveChan, &wg)
 		}
 	}
-	fmt.Println("Waiting")
+	fmt.Println("Waiting for superstep to end")
 	wg.Wait()
-	fmt.Println("Superstep completed")
+	fmt.Println("Superstep", m.currentIteration, "end")
 
 	// Checking for dead workers
 	nodeDied := false
-	fmt.Println("Checking for dead workers")
 	close(nodeDiedChan)
 	for ifNodeDied := range nodeDiedChan {
 		nodeDied = ifNodeDied || nodeDied
@@ -320,12 +297,13 @@ func (m *Master) superstep() (bool, bool) {
 	// }
 
 	// Checking for active workers
-	fmt.Println("Checking for active workers")
 	close(inactiveChan)
 	allInactive := true
 	for ifAllInactive := range inactiveChan {
 		allInactive = allInactive && ifAllInactive
 	}
+
+	fmt.Println("Dead nodes:", nodeDied, ", All nodes inactive:", allInactive)
 	return nodeDied, allInactive
 }
 
