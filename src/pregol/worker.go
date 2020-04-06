@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 
 	"golang.org/x/sync/semaphore"
@@ -387,27 +388,32 @@ func (w *Worker) terminateHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getPortPath(path, port string) string {
+	return strings.TrimSpace(path) + "/" + strings.TrimSpace(port)
+}
+
 // Run ...
-func (w *Worker) Run(ports []string) {
-	http.HandleFunc("/initConnection", initConnectionHandler)
-	http.HandleFunc("/disseminateGraph", w.disseminateGraphHandler)
-	http.HandleFunc("/startSuperstep", w.startSuperstepHandler)
-	http.HandleFunc("/saveState", w.saveStateHandler)
-	http.HandleFunc("/incomingMsg", w.workerToWorkerHandler)
-	http.HandleFunc("/ping", w.pingHandler)
-	http.HandleFunc("/terminate", w.terminateHandler)
-
-	for p := range ports {
-		go http.ListenAndServe(fmt.Sprint(":", ports[p]), nil)
-		fmt.Println("Running worker on port", ports[p])
-	}
-	for {
-
-	}
+func (w *Worker) Run(port string) {
+	http.HandleFunc(getPortPath("/initConnection", port), initConnectionHandler)
+	http.HandleFunc(getPortPath("/disseminateGraph", port), w.disseminateGraphHandler)
+	http.HandleFunc(getPortPath("/startSuperstep", port), w.startSuperstepHandler)
+	http.HandleFunc(getPortPath("/saveState", port), w.saveStateHandler)
+	http.HandleFunc(getPortPath("/incomingMsg", port), w.workerToWorkerHandler)
+	http.HandleFunc(getPortPath("/ping", port), w.pingHandler)
+	http.HandleFunc(getPortPath("/terminate", port), w.terminateHandler)
+	http.ListenAndServe(fmt.Sprint(":", port), nil)
 }
 
 // RunUDF creates a new worker with the given UDF and runs the worker
 func RunUDF(udf UDF, ports []string) {
-	w := NewWorker(udf)
-	w.Run(ports)
+	// w := NewWorker(udf)
+	// w.Run(ports)
+	workers := make([]*Worker, 0)
+	for p := range ports {
+		workers = append(workers, NewWorker(udf))
+		go workers[p].Run(ports[p])
+		fmt.Println("Running worker on port", ports[p])
+	}
+	for {
+	}
 }

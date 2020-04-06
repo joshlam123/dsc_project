@@ -76,14 +76,13 @@ func (m *Master) InitConnections() {
 		// Initialize connection with all nodes, and check if they are active using GET request
 		go func(ip string, wg *sync.WaitGroup, activeNodeChan chan activeNode) {
 			defer wg.Done()
-
+			fmt.Println(getURL(ip, "initConnection"))
 			resp, err := m.client.Get(getURL(ip, "initConnection"))
 			if err != nil {
 				return
 			}
 
 			defer resp.Body.Close()
-
 			if resp.StatusCode == http.StatusOK {
 				fmt.Println("Machine", ip, "connected.")
 				activeNodeChan <- activeNode{ip, make([]int, 0)}
@@ -199,7 +198,7 @@ func (m *Master) DisseminateGraph() {
 }
 
 func getURL(address, path string) string {
-	return "http://" + strings.TrimSpace(address) + "/" + path
+	return "http://" + strings.TrimSpace(address) + "/" + path + "/" + strings.TrimSpace(strings.Split(address, ":")[1])
 }
 
 // getPartition Get the partition which a vertex belongs to.
