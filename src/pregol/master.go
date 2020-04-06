@@ -111,7 +111,8 @@ func (m *Master) InitConnections() {
 
 // AssignPartitions Assign partToVert to active nodes
 func (m *Master) AssignPartitions(graphFile string) {
-	g := getGraphFromFile(graphFile)                          // Read graphfile
+	gOriginal := getGraphFromFile(m.graphFile)                // Original file
+	g := getGraphFromFile(graphFile)                          // Read graphfile (could be original or checkpoint)
 	g.PartitionToNode = make(map[int]int)                     // partition id to node id (to be inserted in each graphToNodes)
 	m.graphsToNodes = make([]graphReader, len(m.activeNodes)) // 1 graph to send to each node
 
@@ -127,7 +128,7 @@ func (m *Master) AssignPartitions(graphFile string) {
 	// Assign data to graphsToNodes
 	for i := range m.graphsToNodes {
 		m.graphsToNodes[i] = newGraphReader()
-		m.graphsToNodes[i].Info = g.Info
+		m.graphsToNodes[i].Info = gOriginal.Info
 		m.graphsToNodes[i].Info.NodeID = i
 		m.graphsToNodes[i].Info.NumPartitions = m.numPartitions
 		m.graphsToNodes[i].ActiveNodes = m.activeNodes
@@ -337,7 +338,6 @@ func (m *Master) saveState() {
 	saveGraph := newGraphReader()
 
 	for gr := range graphsChan {
-		saveGraph.Info = gr.Info
 		saveGraph.ActiveVerts = append(saveGraph.ActiveVerts, gr.ActiveVerts...)
 		for id, vr := range gr.Vertices {
 			saveGraph.Vertices[id] = vr
@@ -382,9 +382,9 @@ func (m *Master) done() {
 	}
 	wg.Wait()
 
-	if _, err := os.Stat(checkpointPATH); err == nil {
-		os.Remove(checkpointPATH)
-	}
+	// if _, err := os.Stat(checkpointPATH); err == nil {
+	// 	os.Remove(checkpointPATH)
+	// }
 }
 
 func (m *Master) Run() {
