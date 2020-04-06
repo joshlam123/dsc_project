@@ -75,12 +75,14 @@ func (w *Worker) initState(gr graphReader) {
 			make(map[int]float64),
 			gr.Edges[vID]}
 
-		if _, ok := w.partToVert[partID]; !ok {
-			w.partToVert[partID] = make(map[int]*Vertex)
+		if w.ID == gr.PartitionToNode[partID] {
+			if _, ok := w.partToVert[partID]; !ok {
+				w.partToVert[partID] = make(map[int]*Vertex)
+			}
+			w.partToVert[partID][vID] = &v
+			w.activeVert = gr.ActiveVerts
+			w.outQueue = gr.outQueue
 		}
-		w.partToVert[partID][vID] = &v
-		w.activeVert = gr.ActiveVerts
-		w.outQueue = gr.outQueue
 	}
 	w.superstep = gr.superstep
 	fmt.Println("Done loading, releasing pingpong.")
