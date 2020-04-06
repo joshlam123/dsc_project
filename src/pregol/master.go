@@ -117,16 +117,20 @@ func (m *Master) InitConnections() {
 
 // AssignPartitions Assign partToVert to active nodes
 func (m *Master) AssignPartitions(graphFile string) {
-	g := getGraphFromFile(graphFile)
-	g.PartitionToNode = make(map[int]int)
-	m.graphsToNodes = make([]graphReader, len(m.activeNodes))
+	g := getGraphFromFile(graphFile)                          // Read graphfile
+	g.PartitionToNode = make(map[int]int)                     // partition id to node id (to be inserted in each graphToNodes)
+	m.graphsToNodes = make([]graphReader, len(m.activeNodes)) // 1 graph to send to each node
 
+	// Loop through each partition
+	// Assign partitions to nodes
 	for i := 0; i < m.numPartitions; i++ {
 		cNode := i % len(m.activeNodes)
 		m.activeNodes[cNode].PartitionList = append(m.activeNodes[cNode].PartitionList, i)
 		g.PartitionToNode[i] = cNode
 	}
 
+	// Loop through all nodes
+	// Assign data to graphsToNodes
 	for i := range m.graphsToNodes {
 		m.graphsToNodes[i] = newGraphReader()
 		m.graphsToNodes[i].Info = g.Info
@@ -137,6 +141,8 @@ func (m *Master) AssignPartitions(graphFile string) {
 		m.graphsToNodes[i].superstep = m.currentIteration
 	}
 
+	// Loop through all vertices
+	// Assign data to vertices
 	for k, v := range g.Vertices {
 		partitionIdx := getPartition(k, m.numPartitions)
 		cNode := partitionIdx % len(m.activeNodes)
@@ -147,6 +153,8 @@ func (m *Master) AssignPartitions(graphFile string) {
 		}
 	}
 
+	// Loop through all active vertices
+	// Activate active vertices flag on graphsToNodes
 	for aV := range g.ActiveVerts {
 		partitionIdx := getPartition(aV, m.numPartitions)
 		cNode := partitionIdx % len(m.activeNodes)
@@ -397,9 +405,9 @@ func (m *Master) done() {
 	}
 	wg.Wait()
 
-	if _, err := os.Stat(checkpointPATH); err == nil {
-		os.Remove(checkpointPATH)
-	}
+	// if _, err := os.Stat(checkpointPATH); err == nil {
+	// 	os.Remove(checkpointPATH)
+	// }
 }
 
 func (m *Master) Run() {
