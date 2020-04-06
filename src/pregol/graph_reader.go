@@ -33,11 +33,11 @@ type edgeReader struct {
 type graphReader struct {
 	Info            infoReader
 	Vertices        map[int]vertexReader
-	Edges           map[int][]edgeReader
+	Edges           map[int][]edgeReader // source: []Edges
 	PartitionToNode map[int]int
 	ActiveNodes     []activeNode
-	outQueue        map[int][]float64 // worker ID to outQueue map
-	superstep       int
+	OutQueue        map[int][]float64 // worker ID to OutQueue map
+	Superstep       int
 	ActiveVerts     []int
 }
 
@@ -70,7 +70,7 @@ func newGraphReader() graphReader {
 	gR := graphReader{}
 	gR.Vertices = make(map[int]vertexReader)
 	gR.Edges = make(map[int][]edgeReader)
-	gR.outQueue = make(map[int][]float64)
+	gR.OutQueue = make(map[int][]float64)
 	gR.PartitionToNode = make(map[int]int)
 	return gR
 }
