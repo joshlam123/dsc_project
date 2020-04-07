@@ -22,6 +22,7 @@ const (
 	SUPERSTEP masterState = iota
 	DEAD
 	DONE
+	SAVESTATE
 )
 
 // Master ...
@@ -58,7 +59,7 @@ func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string) *Master 
 	}
 	m.nodeAdrs = make(map[string]bool)
 	for _, ip := range strings.Split(string(dat), "\n") {
-		m.nodeAdrs[ip] = false
+		m.nodeAdrs[strings.TrimSpace(ip)] = false
 	}
 
 	return &m
@@ -85,7 +86,7 @@ func (m *Master) InitConnections() {
 
 			defer resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
-				fmt.Println("Machine", strings.TrimSpace(ip), "connected")
+				fmt.Println("Machine", ip, "connected")
 				activeNodeChan <- activeNode{ip, make([]int, 0)}
 			}
 		}(ip, &wg, activeNodeChan)
@@ -95,7 +96,6 @@ func (m *Master) InitConnections() {
 	close(activeNodeChan)
 
 	m.activeNodes = make([]activeNode, 0)
-	m.nodeAdrs = make(map[string]bool)
 	for ip := range m.nodeAdrs {
 		m.nodeAdrs[ip] = false
 	}
@@ -184,7 +184,7 @@ func (m *Master) DisseminateGraph() {
 			defer resp.Body.Close()
 
 			if resp.StatusCode == http.StatusOK {
-				fmt.Println("Machine", strings.TrimSpace(ip), "received graph.")
+				fmt.Println("Machine", ip, "received graph.")
 			}
 		}(aNode.IP, &wg, m.graphsToNodes[idx])
 	}
@@ -213,35 +213,35 @@ func (m *Master) rollback(graphFile string) {
 
 func (m *Master) superstep() (bool, bool) {
 	fmt.Println("Starting Superstep", m.currentIteration)
-	nodeDiedChan := make(chan bool, len(m.activeNodes))
+	diedChan := make(chan bool, len(m.activeNodes))
 	inactiveChan := make(chan bool, len(m.activeNodes))
 
 	var wg sync.WaitGroup
 	for ip, active := range m.nodeAdrs {
 		if active {
 			wg.Add(1)
-			go func(ip string, nodeDiedChan, inactiveChan chan bool, wg *sync.WaitGroup) {
+			go func(ip string, diedChan, inactiveChan chan bool, wg *sync.WaitGroup) {
 				// Start Superstep
 				defer wg.Done()
 
 				resp, err := m.client.Get(getURL(ip, "startSuperstep"))
 				if err != nil {
-					nodeDiedChan <- true
+					diedChan <- true
 					return
 				}
 
 				if resp.StatusCode != http.StatusOK {
-					nodeDiedChan <- true
+					diedChan <- true
 					return
 				}
 
 				// Start pinging
 				for {
-					fmt.Println("Pinging", strings.TrimSpace(ip))
+					fmt.Println("Pinging", ip)
 					req, _ := http.NewRequest("POST", getURL(ip, "ping"), bytes.NewBuffer([]byte("Completed Superstep?")))
 					pingResp, err2 := m.client.Do(req)
 					if err2 != nil || pingResp.StatusCode != http.StatusOK {
-						nodeDiedChan <- true
+						diedChan <- true
 						return
 					}
 					defer pingResp.Body.Close()
@@ -250,7 +250,7 @@ func (m *Master) superstep() (bool, bool) {
 					if result != "still not done" {
 						var activeVert []int
 						json.Unmarshal(bodyBytes, &activeVert)
-						fmt.Println("Active vertices from", strings.TrimSpace(ip), ":", activeVert)
+						fmt.Println("Active vertices from", ip, ":", activeVert)
 						if len(activeVert) == 0 {
 							inactiveChan <- true
 						} else {
@@ -258,10 +258,10 @@ func (m *Master) superstep() (bool, bool) {
 						}
 						return
 					}
-					fmt.Println(strings.TrimSpace(ip), "is still busy")
+					fmt.Println(ip, "is still busy")
 					time.Sleep(time.Second * 5)
 				}
-			}(ip, nodeDiedChan, inactiveChan, &wg)
+			}(ip, diedChan, inactiveChan, &wg)
 		}
 	}
 	fmt.Println("Waiting for Superstep to end")
@@ -270,31 +270,10 @@ func (m *Master) superstep() (bool, bool) {
 
 	// Checking for dead workers
 	nodeDied := false
-	close(nodeDiedChan)
-	for ifNodeDied := range nodeDiedChan {
+	close(diedChan)
+	for ifNodeDied := range diedChan {
 		nodeDied = ifNodeDied || nodeDied
 	}
-
-	// Checking for revived nodes
-	// nodeRevivedChan := make(chan bool, len(m.nodeAdrs)-len(m.activeNodes))
-	// for ip, active := range m.nodeAdrs {
-	// 	if !active {
-	// 		wg.Add(1)
-	// 		go func(ip string, wg *sync.WaitGroup) {
-	// 			defer wg.Done()
-	// 			_, err := m.client.Get(getURL(ip, "3000", "ping"))
-	// 			if err != nil {
-	// 				return
-	// 			}
-	// 			nodeRevivedChan <- true
-	// 		}(ip, &wg)
-	// 	}
-	// }
-	// wg.Wait()
-	// close(nodeRevivedChan)
-	// for ifNodeRevived := range nodeRevivedChan {
-	// 	nodeRevived = ifNodeRevived || nodeRevived
-	// }
 
 	// Checking for active workers
 	close(inactiveChan)
@@ -307,7 +286,7 @@ func (m *Master) superstep() (bool, bool) {
 	return nodeDied, allInactive
 }
 
-func (m *Master) saveState() {
+func (m *Master) saveState() bool {
 	fmt.Println("Saving state")
 	graphsChan := make(chan *graphReader, len(m.activeNodes))
 	var wg sync.WaitGroup
@@ -357,6 +336,31 @@ func (m *Master) saveState() {
 	}
 	saveFile := getJSONByteFromGraph(saveGraph)
 	ioutil.WriteFile(checkpointPATH, saveFile, 0644)
+
+	fmt.Println("Checking for revived nodes")
+	// Checking for revived nodes
+	reviveChan := make(chan bool, len(m.nodeAdrs)-len(m.activeNodes))
+	for ip, active := range m.nodeAdrs {
+		if !active {
+			wg.Add(1)
+			go func(ip string, reviveChan chan bool, wg *sync.WaitGroup) {
+				defer wg.Done()
+				_, err := m.client.Get(getURL(ip, "initConnection"))
+				if err != nil {
+					return
+				}
+				reviveChan <- true
+			}(ip, reviveChan, &wg)
+		}
+	}
+	wg.Wait()
+	close(reviveChan)
+	nodeRevived := false
+	for ifNodeRevived := range reviveChan {
+		nodeRevived = ifNodeRevived || nodeRevived
+	}
+	fmt.Println("Revived nodes:", nodeRevived)
+	return nodeRevived
 }
 
 func (m *Master) dead() {
@@ -394,17 +398,24 @@ func (m *Master) Run() {
 		switch currentState {
 		case SUPERSTEP:
 			nodeDied, allInactive := m.superstep()
-			m.currentIteration++
 			if nodeDied {
 				currentState = DEAD
 			} else if allInactive {
 				currentState = DONE
 			} else {
-				currentState = SUPERSTEP
 				if m.currentIteration != 0 && m.currentIteration%m.checkpoint == 0 {
-					m.saveState()
+					currentState = SAVESTATE
+				} else {
+					currentState = SUPERSTEP
 				}
+				m.currentIteration++
 			}
+		case SAVESTATE:
+			nodeRevived := m.saveState()
+			if nodeRevived {
+				m.rollback(checkpointPATH)
+			}
+			currentState = SUPERSTEP
 		case DEAD:
 			m.dead()
 			currentState = SUPERSTEP
