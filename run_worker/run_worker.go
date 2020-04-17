@@ -1,9 +1,9 @@
 package main
 
 import (
+	"dsc_project/src/pregol"
 	"fmt"
 	"os"
-	"pregol"
 )
 
 // MaxValue represents the Pregel program for finding the max value among all vertices
@@ -38,7 +38,7 @@ func MaxValue(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 	return true, msgs
 }
 
-func Run() {
+func main() {
 	ports := os.Args[1:]
 	pregol.RunUDF(MaxValue, ports)
 }

@@ -152,7 +152,7 @@ func (w *Worker) disseminateMsgFromOutQ() {
 	nodeToOutQ := make(map[int]map[int][]float64)
 
 	// iterate over the worker's outqueue and prepare to disseminate it to the correct destination vertexID
-	fmt.Println("OutQueue: ", w.outQueue)
+	//fmt.Println("OutQueue: ", w.outQueue)
 	for destVert, vals := range w.outQueue {
 
 		w.outQLock.RLock()
@@ -189,7 +189,7 @@ func (w *Worker) disseminateMsgFromOutQ() {
 					for i := range outQ[vID] {
 						w.inQueue[vID] = append(w.inQueue[vID], outQ[vID][i])
 					}
-					fmt.Println("Populating own inQ.")
+					//fmt.Println("Populating own inQ.")
 				}
 
 			}(nodeID, outQ)
@@ -244,7 +244,7 @@ func (w *Worker) processVertResult(rm ResultMsg) {
 	}
 }
 
-func initConnectionHandler(rw http.ResponseWriter, r *http.Request) {
+func (w *Worker) initConnectionHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, "connected")
 }
 
@@ -345,8 +345,8 @@ func (w *Worker) pingHandler(rw http.ResponseWriter, r *http.Request) {
 	// read the ping request
 	bodyByte, _ := ioutil.ReadAll(r.Body)
 	bodyString := string(bodyByte)
-	fmt.Println("received ping")
-	fmt.Println("bodystring: ", bodyString)
+	fmt.Println("received ping: ", bodyString)
+	//fmt.Println("bodystring: ", bodyString)
 
 	if bodyString == "Completed graphHandler?" {
 		if w.pingPong.TryAcquire(1) == false {
@@ -386,6 +386,7 @@ func (w *Worker) pingHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (w *Worker) terminateHandler(rw http.ResponseWriter, r *http.Request) {
+	fmt.Println("I have terminated.")
 	printGraphReader(w.graphReader)
 	for _, vert := range w.partToVert {
 		for _, v := range vert {
@@ -400,7 +401,7 @@ func getPortPath(path, port string) string {
 
 // Run ...
 func (w *Worker) Run(port string) {
-	http.HandleFunc(getPortPath("/initConnection", port), initConnectionHandler)
+	http.HandleFunc(getPortPath("/initConnection", port), w.initConnectionHandler)
 	http.HandleFunc(getPortPath("/disseminateGraph", port), w.disseminateGraphHandler)
 	http.HandleFunc(getPortPath("/startSuperstep", port), w.startSuperstepHandler)
 	http.HandleFunc(getPortPath("/saveState", port), w.saveStateHandler)
