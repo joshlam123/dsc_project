@@ -1,4 +1,4 @@
-package pregol
+package main
 
 import ("math/rand"
 		"net/http"
@@ -67,6 +67,14 @@ func initGUI() *serverStats {
 }
 
 func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *http.Request) {
+	jsonFile, err := os.Open("../../run_master/users.json")
+	// if we os.Open returns an error then handle it
+	if err != nil {
+	    fmt.Println(err)
+	}
+	fmt.Println("Successfully Opened users.json")
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
 
 	graphBody, err := ioutil.ReadAll(r.Body) // arr of bytes
 	if err != nil {
@@ -94,7 +102,7 @@ func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *htt
     guistats.numNodes = 0
     gui.numEdges = 0
 
-    
+
 	// get graph
 	// mRecv := getGraphFromJSONByte(graphVals)
 
@@ -108,11 +116,11 @@ func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *htt
 	// 	m.graphsToNodes[i].PartitionToNode = g.PartitionToNode
 	// 	m.graphsToNodes[i].Superstep = m.currentIteration
 	// }
-    
+
     for k,v := range gr.activeNodes {
     	totalAliveTime[]
     }
-    
+
 
     var avgTiming 
 

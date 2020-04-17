@@ -64,8 +64,8 @@ func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string) *Master 
 	}
 
 	// master accepts a port argument to run the gui server
-	port := os.Args[1]
-	go RunGUI(port)
+	// port := os.Args[1]
+	// go RunGUI(port)
 
 	return &m
 }
@@ -401,7 +401,6 @@ func (m *Master) Run() {
 	currentState := SUPERSTEP
 	m.rollback(m.graphFile)
 	// for GUI
-	totalAliveTime := make(map[int]int)
 	for {
 		switch currentState {
 		case SUPERSTEP:
@@ -434,10 +433,9 @@ func (m *Master) Run() {
 	
 
 	// TODO: JOSH send the master condition to GUI
-	guiMsg := guiSend{numPartitions: m.numPartitions, currentIteration: m.currentIteration, activeNodes: m.activeNodes}
-	msg, _ := json.Marshal(guiMsg)
-	req, err := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer([]byte msg)
-
+	// guiMsg := guiSend{numPartitions: m.numPartitions, currentIteration: m.currentIteration, activeNodes: m.activeNodes}
+	// msg, _ := json.Marshal(guiMsg)
+	// req, _ := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer([]byte msg)
 	}
 }
 
