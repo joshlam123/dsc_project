@@ -38,8 +38,9 @@ type Master struct {
 }
 
 type guiSend struct {
-	master Master
-	iter   int
+	numPartitions    int
+	currentIteration int
+	activeNodes      []activeNode
 }
 
 // NewMaster Constructor for Master struct
@@ -61,6 +62,10 @@ func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string) *Master 
 	for _, ip := range strings.Split(string(dat), "\n") {
 		m.nodeAdrs[strings.TrimSpace(ip)] = false
 	}
+
+	// master accepts a port argument to run the gui server
+	port := os.Args[1]
+	go RunGUI(port)
 
 	return &m
 }
@@ -391,9 +396,12 @@ func (m *Master) done() {
 	}
 }
 
+
 func (m *Master) Run() {
 	currentState := SUPERSTEP
 	m.rollback(m.graphFile)
+	// for GUI
+	totalAliveTime := make(map[int]int)
 	for {
 		switch currentState {
 		case SUPERSTEP:
@@ -423,6 +431,13 @@ func (m *Master) Run() {
 			m.done()
 			return
 		}
+	
+
+	// TODO: JOSH send the master condition to GUI
+	guiMsg := guiSend{numPartitions: m.numPartitions, currentIteration: m.currentIteration, activeNodes: m.activeNodes}
+	msg, _ := json.Marshal(guiMsg)
+	req, err := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer([]byte msg)
+
 	}
 }
 
@@ -592,10 +607,6 @@ func (m *Master) Run() {
 // 				// TODO: Check end condition
 
 // 				currentIter++
-
-// 				// TODO: JOSH send the master condition to GUI
-// 				//guiMsg := guiSend{master: m, iter: currentIter}
-// 				//req, err := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer(guiMsg), currentIter)
 
 // 			}
 // 		}
