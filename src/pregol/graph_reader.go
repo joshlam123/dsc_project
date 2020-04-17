@@ -31,14 +31,15 @@ type edgeReader struct {
 }
 
 type graphReader struct {
-	Info            infoReader
-	Vertices        map[int]vertexReader
-	Edges           map[int][]edgeReader // source: []Edges
-	PartitionToNode map[int]int
-	ActiveNodes     []activeNode
-	OutQueue        map[int][]float64 // worker ID to OutQueue map
-	Superstep       int
-	ActiveVerts     []int
+	Info             infoReader
+	Vertices         map[int]vertexReader
+	Edges            map[int][]edgeReader // source: []Edges
+	PartitionToNode  map[int]int
+	ActiveNodes      []activeNode
+	OutQueue         map[int][]float64 // worker ID to OutQueue map
+	Superstep        int
+	ActiveVerts      []int
+	CurrentIteration int
 }
 
 func printGraphReader(gr graphReader) {

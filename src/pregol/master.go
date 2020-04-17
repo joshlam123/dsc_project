@@ -35,6 +35,8 @@ type Master struct {
 	graphFile        string //
 	client           *http.Client
 	currentIteration int
+	port             string
+	primaryAddress   string
 }
 
 type guiSend struct {
@@ -44,7 +46,7 @@ type guiSend struct {
 }
 
 // NewMaster Constructor for Master struct
-func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string) *Master {
+func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string, port string, primaryAddress string) *Master {
 	m := Master{}
 	m.numPartitions = numPartitions
 	m.checkpoint = checkpoint
@@ -54,6 +56,8 @@ func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string) *Master 
 		Timeout: time.Second * 10,
 	}
 	m.currentIteration = 0
+	m.port = port
+	m.primaryAddress = primaryAddress
 	dat, err := ioutil.ReadFile(ipFile)
 	if err != nil {
 		panic(err)
@@ -396,11 +400,61 @@ func (m *Master) done() {
 	}
 }
 
+func (m *Master) pingMaster(rw http.ResponseWriter, r *http.Request) {
+	// Check request
+	defer r.Body.Close()
+	bodyBytes, _ := ioutil.ReadAll(r.Body)
+	currentCheckpoint := m.currentIteration - (m.currentIteration % m.checkpoint)
+
+	// Send CP file if not up to date
+	if string(bodyBytes) != string(currentCheckpoint) && m.currentIteration > m.checkpoint {
+		gr := getGraphFromFile(checkpointPATH)
+		gr.CurrentIteration = currentCheckpoint
+		sendCP := getJSONByteFromGraph(*gr)
+		rw.Write(sendCP)
+	}
+}
 
 func (m *Master) Run() {
+	if len(m.primaryAddress) != 0 {
+		for {
+			time.Sleep(time.Second * 10)
+			// Ping primary
+			var sendStr = []byte(string(m.currentIteration))
+			req, _ := http.NewRequest("GET", getURL(m.primaryAddress, "pingMaster"), bytes.NewBuffer(sendStr))
+			pingResp, err := m.client.Do(req)
+			if err != nil {
+				// Primary not responding -> break!
+				fmt.Println("Primary not responding! Taking over!")
+				break
+			}
+
+			fmt.Println("Primary alive.")
+			// Check for CP file
+			defer pingResp.Body.Close()
+			bodyBytes, _ := ioutil.ReadAll(pingResp.Body)
+			if string(bodyBytes) != "" {
+				bodyBytes, _ := ioutil.ReadAll(pingResp.Body)
+				// Save CP file
+				gr := getGraphFromJSONByte(bodyBytes)
+				m.currentIteration = gr.CurrentIteration
+				// saveFile := getJSONByteFromGraph(gr)
+				ioutil.WriteFile(checkpointPATH, bodyBytes, 0644)
+			}
+
+		}
+
+	}
+
+	// Start replica-response server
+	go func() {
+		http.HandleFunc("/pingMaster", m.pingMaster)
+		http.ListenAndServe(fmt.Sprint(":", m.port), nil)
+	}()
+
 	currentState := SUPERSTEP
 	m.rollback(m.graphFile)
-	// for GUI
+
 	for {
 		switch currentState {
 		case SUPERSTEP:
@@ -430,183 +484,10 @@ func (m *Master) Run() {
 			m.done()
 			return
 		}
-	
 
-	// TODO: JOSH send the master condition to GUI
-	// guiMsg := guiSend{numPartitions: m.numPartitions, currentIteration: m.currentIteration, activeNodes: m.activeNodes}
-	// msg, _ := json.Marshal(guiMsg)
-	// req, _ := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer([]byte msg)
+		// TODO: JOSH send the master condition to GUI
+		// guiMsg := guiSend{numPartitions: m.numPartitions, currentIteration: m.currentIteration, activeNodes: m.activeNodes}
+		// msg, _ := json.Marshal(guiMsg)
+		// req, _ := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer([]byte msg)
 	}
 }
-
-// // Run ...
-// func (m *Master) Run() {
-// 	currentIter := 0
-// 	nodeDied := true
-// 	// nodeRevived := false
-// 	// checkpointFile := "checkpoint.json"
-
-// 	for {
-// 		if nodeDied {
-// 			if currentIter < m.checkpoint {
-// 				m.rollback(m.graphFile)
-// 				currentIter = 0
-// 				// } else {
-// 				// 	m.rollback(checkpointFile)
-// 				// 	// TODO: Load messages
-// 				// 	currentIter -= (currentIter % m.checkpoint)
-// 				// }
-// 				nodeDied = false
-// 				//continue
-// 			}
-
-// 			if currentIter%m.checkpoint == 0 {
-// 				var wg2 sync.WaitGroup
-// 				for ip, active := range m.nodeAdrs {
-// 					if active {
-// 						wg2.Add(1)
-// 						go func(ip string, wg *sync.WaitGroup) {
-// 							// TODO: Start Superstep
-// 							defer wg.Done()
-
-// 							resp, err := m.client.Get(getURL(ip, "3000", "saveState"))
-// 							if err != nil {
-
-// 								return
-// 							}
-
-// 							if resp.StatusCode != http.StatusOK {
-// 								return
-// 							}
-
-// 						}(ip, &wg2)
-// 					}
-// 					// 	// TODO: Save worker states
-
-// 					// 	if nodeRevived {
-// 					// 		m.rollback(checkpointFile)
-// 					// 		// TODO: Load messages
-// 					// 		nodeRevived = false
-// 					// 	}
-// 					// }
-// 				}
-
-// 				nodeDiedChan := make(chan bool, len(m.activeNodes))
-// 				inactiveChan := make(chan bool, len(m.activeNodes))
-
-// 				var wg sync.WaitGroup
-// 				for ip, active := range m.nodeAdrs {
-// 					if active {
-// 						wg.Add(1)
-// 						go func(ip string, nodeDiedChan, inactiveChan chan bool, wg *sync.WaitGroup) {
-// 							// TODO: Start Superstep
-// 							defer wg.Done()
-
-// 							resp, err := m.client.Get(getURL(ip, "3000", "startSuperstep"))
-// 							if err != nil {
-// 								nodeDiedChan <- true
-// 								return
-// 							}
-
-// 							if resp.StatusCode != http.StatusOK {
-// 								nodeDiedChan <- true
-// 								return
-// 							}
-
-// 							// Start pinging
-// 							for {
-// 								// pingResp, err2 := m.client.Get(getURL(ip, "3000", "ping"))
-// 								fmt.Println("Pinging", ip)
-// 								req, _ := http.NewRequest("POST", getURL(ip, "3000", "ping"), bytes.NewBuffer([]byte("Completed Superstep?")))
-// 								pingResp, err2 := m.client.Do(req)
-// 								if err2 != nil {
-// 									nodeDiedChan <- true
-// 									return
-// 								}
-
-// 								if pingResp.StatusCode != http.StatusOK {
-// 									nodeDiedChan <- true
-// 									return
-// 								}
-// 								defer pingResp.Body.Close()
-// 								bodyBytes, _ := ioutil.ReadAll(pingResp.Body)
-// 								fmt.Println(bodyBytes)
-// 								result := string(bodyBytes)
-// 								fmt.Println(result)
-// 								if result != "still not done" {
-// 									var activeVert []int
-// 									json.Unmarshal(bodyBytes, &activeVert)
-// 									fmt.Println(activeVert)
-// 									if len(activeVert) == 0 {
-// 										fmt.Println("No active workers")
-// 										inactiveChan <- true
-// 									} else {
-// 										inactiveChan <- false
-// 									}
-// 									return
-// 								} else {
-// 									fmt.Println(ip, "still busy")
-// 								}
-// 								time.Sleep(time.Second * 5)
-// 							}
-// 						}(ip, nodeDiedChan, inactiveChan, &wg)
-// 					}
-// 				}
-// 				fmt.Println("Waiting")
-// 				wg.Wait()
-// 				fmt.Println("Superstep completed")
-// 				close(nodeDiedChan)
-// 				fmt.Println("Checking for dead workers")
-// 				for ifNodeDied := range nodeDiedChan {
-// 					nodeDied = ifNodeDied || nodeDied
-// 				}
-// 				close(inactiveChan)
-// 				fmt.Println("Checking for active workers")
-// 				allInactive := true
-// 				for ifAllInactive := range inactiveChan {
-// 					allInactive = allInactive && ifAllInactive
-// 				}
-// 				if allInactive {
-// 					fmt.Println("Computation has completed.")
-// 					for ip, active := range m.nodeAdrs {
-// 						if active {
-// 							wg.Add(1)
-// 							go func(ip string, wg *sync.WaitGroup) {
-// 								defer wg.Done()
-// 								m.client.Get(getURL(ip, "3000", "terminate"))
-// 							}(ip, &wg)
-// 						}
-// 					}
-// 					wg.Wait()
-// 					break
-// 				}
-
-// 				// Check nodeRevived
-// 				// nodeRevivedChan := make(chan bool, len(m.nodeAdrs)-len(m.activeNodes))
-// 				// for ip, active := range m.nodeAdrs {
-// 				// 	if !active {
-// 				// 		wg.Add(1)
-// 				// 		go func(ip string, wg *sync.WaitGroup) {
-// 				// 			defer wg.Done()
-// 				// 			_, err := m.client.Get(getURL(ip, "3000", "ping"))
-// 				// 			if err != nil {
-// 				// 				return
-// 				// 			}
-// 				// 			nodeRevivedChan <- true
-// 				// 		}(ip, &wg)
-// 				// 	}
-// 				// }
-// 				// wg.Wait()
-// 				// close(nodeRevivedChan)
-// 				// for ifNodeRevived := range nodeRevivedChan {
-// 				// 	nodeRevived = ifNodeRevived || nodeRevived
-// 				// }
-
-// 				// TODO: Check end condition
-
-// 				currentIter++
-
-// 			}
-// 		}
-// 	}
-// }
