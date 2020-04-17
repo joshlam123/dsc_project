@@ -69,8 +69,8 @@ func (w *Worker) initState(gr graphReader) {
 
 	for vID, vReader := range gr.Vertices {
 		partID := getPartition(vID, gr.Info.NumPartitions)
-		fmt.Print("Received: ", vID, " ")
-		fmt.Println("")
+		//fmt.Print("Received: ", vID, " ")
+		//fmt.Println("")
 		v := Vertex{vID,
 			vReader.Flag, //false = active
 			vReader.Value,
@@ -103,7 +103,7 @@ func (w *Worker) startSuperstep() {
 	defer w.pingPong.Release(1)
 
 	// sending values to vertices through InMsg Channel
-	fmt.Println("inqueue: ", w.inQueue)
+	//fmt.Println("inqueue: ", w.inQueue)
 	for vID, val := range w.inQueue {
 		partID := getPartition(vID, w.graphReader.Info.NumPartitions)
 		fmt.Println("new val: ", val)
@@ -204,8 +204,8 @@ func (w *Worker) disseminateMsgFromOutQ() {
 				fmt.Println("Sending InQ values to worker via json post")
 
 				c := &http.Client{}
-				fmt.Println("Sending to peer: ", outQ)
-				fmt.Println("String OutQBytes: ", string(outQBytes))
+				//fmt.Println("Sending to peer: ", outQ)
+				//fmt.Println("String OutQBytes: ", string(outQBytes))
 				req, err := http.NewRequest("POST", getURL(workerIP, "incomingMsg"), bytes.NewBuffer(outQBytes))
 				if err != nil {
 					log.Fatalln(err)
@@ -339,15 +339,6 @@ func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 	//fmt.Println(string(bytes), len(bytes))
 	rw.Write(bytes)
 	fmt.Println("Sending saved state to master.")
-
-	// TODO: parse json to send to Master - graphReader and In/Out Queue
-
-	// wait for the Master's the GET request - isit a ping????
-
-	// define the format of the response
-
-	// send back the response here - encoded as json or something
-
 }
 
 func (w *Worker) pingHandler(rw http.ResponseWriter, r *http.Request) {
