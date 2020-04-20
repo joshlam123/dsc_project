@@ -6,8 +6,8 @@
        width="100%"
        height="100%"
        dataformat="json"       dataEmptyMessage="i-https://i.postimg.cc/R0QCk9vV/Rolling-0-9s-99px.gif"
-       dataEmptyMessageImageScale=39
-       :datasource="tempChartData"
+
+       :datasource="aliveTime"
      >
      </fusioncharts>
      <fusioncharts
@@ -15,8 +15,7 @@
        width="100%"
        height="100%"
        dataformat="json"       dataEmptyMessage="i-https://i.postimg.cc/R0QCk9vV/Rolling-0-9s-99px.gif"
-       dataEmptyMessageImageScale=39
-       :datasource="tempChartData"
+       :datasource="cfdata"
      >
      </fusioncharts>
    </div>
@@ -30,9 +29,40 @@ export default {
  components: {},
  data() {
    return {
-     tempChartData: {
+
+     aliveTime: {
        chart: {
-         caption: "Distribution of OutDegree Nodes by Worker",
+         caption: "Alive Time for each Node",
+         captionFontBold: "0",
+         captionFontColor: "#000000",
+         captionPadding: "30",
+         baseFont: "Roboto",
+         chartTopMargin: "30",
+         showHoverEffect: "1",
+         theme: "fusion",
+         showaxislines: "1",
+         numberSuffix: "°C",
+         anchorBgColor: "#6297d9",
+         paletteColors: "#6297d9",
+         drawCrossLine: "1",
+         plotToolText: "$label<br><hr><b>$dataValue</b>",
+         showAxisLines: "0",
+         showYAxisValues: "0",
+         anchorRadius: "4",
+         divLineAlpha: "0",
+         labelFontSize: "13",
+         labelAlpha: "65",
+         labelFontBold: "0",
+         rotateLabels: "1",
+         slantLabels: "1",
+         canvasPadding: "20"
+       },
+       data: [],
+     },
+
+     cfdata: {
+       chart: {
+         caption: "Cost Function of each Vertice",
          captionFontBold: "0",
          captionFontColor: "#000000",
          captionPadding: "30",
@@ -61,26 +91,43 @@ export default {
      },
    };
  },
+
  methods: {
-   setChartData: function() {
+   setcfdata: function() {
+   console.log(this.tempVar.nodeVertCostFn)
+     var data = [];
+     for (var i = 0; i < this.tempVar.nodeVertCostFn; i++) {
+       var dataObject = {
+         label: i,
+         value: this.tempVar.nodeVertCostFn[i]
+       };
+       data.push(dataObject);
+     }
+     this.cfdata.data = data;
+     console.log(this.cfdata.data)
+   },
+   setalivedata: function() {
      var data = [];
      for (var i = 0; i < this.tempVar.tempToday.length; i++) {
        var dataObject = {
          label: this.tempVar.tempToday[i].hour,
          value: this.tempVar.tempToday[i].temp
        };
+
        data.push(dataObject);
      }
-     this.tempChartData.data = data;
+     this.cfdata.data = data;
    },
  },
  mounted: function() {
-   this.setChartData();
+   this.setcfdata();
+   this.setalivedata();
  },
  watch: {
    tempVar: {
      handler: function() {
-       this.setChartData();                                   
+       this.setcfdata();  
+       this.setalivedata()                                 
      },
      deep: true
    },

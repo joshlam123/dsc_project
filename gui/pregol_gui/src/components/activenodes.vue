@@ -31,9 +31,9 @@ export default {
          captionFontColor: "#000000",
          captionPadding: "30",
          lowerLimit: "0",
-         upperLimit: "15",
+         upperLimit: "20",
          lowerLimitDisplay: "1",
-         upperLimitDisplay: "1",
+         upperLimitDisplay: "20",
          showValue: "0",
          theme: "fusion",
          baseFont: "Roboto",
@@ -46,7 +46,7 @@ export default {
          valueFontSize: "20",
          valueFontColor: "#000000",
          valueFontBold: "1",
-         tickValueDistance: "3",
+         tickValueDistance: "2",
          autoAlignTickValues: "1",
          majorTMAlpha: "20",
          chartTopMargin: "30",
@@ -61,7 +61,7 @@ export default {
            },
            {
              minvalue: this.highlights.uvIndex.toString(),
-             maxvalue: "15",
+             maxvalue: "10",
              code: "#D8EDFF"
            }
          ]

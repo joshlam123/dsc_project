@@ -3,25 +3,25 @@
     <div class="card-body pb-0">
     <div class="content-header h4 text-center pt-2 pb-3">Highlights</div>
       <div class="row">
-        <uv-index :highlights="highlights"></uv-index>
+        <active-nodes :highlights="highlights"></active-nodes>
         <!--visibility :highlights="highlights"></visibility-->
-        <wind-status :highlights="highlights"></wind-status>
+        <sum-index :highlights="highlights"></sum-index>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import UVIndex from "./UVIndex.vue";
+import ActiveNodes from "./activenodes.vue";
 import Visibility from "./Visibility.vue";
-import WindStatus from "./WindStatus.vue";
+import Details from "./Summary.vue";
 
 export default {
   props: ["highlights"],
   components: {
-    "uv-index": UVIndex,
+    "active-nodes": ActiveNodes,
     "visibility": Visibility,
-    "wind-status": WindStatus,
+    "sum-index": Details,
   },
 };
 </script>

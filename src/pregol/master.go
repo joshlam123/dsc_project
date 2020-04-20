@@ -485,9 +485,5 @@ func (m *Master) Run() {
 			return
 		}
 
-		// TODO: JOSH send the master condition to GUI
-		// guiMsg := guiSend{numPartitions: m.numPartitions, currentIteration: m.currentIteration, activeNodes: m.activeNodes}
-		// msg, _ := json.Marshal(guiMsg)
-		// req, _ := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer([]byte msg)
 	}
 }
