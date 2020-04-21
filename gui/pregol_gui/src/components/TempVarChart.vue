@@ -1,23 +1,28 @@
 <template>
  <div class="custom-card header-card card">
    <div class="card-body pt-0">
+   <div class="wrapper-left pt-4 pb-2 text-center">
      <fusioncharts
-       type="spline"
+       type="column2d"
        width="100%"
-       height="100%"
-       dataformat="json"       dataEmptyMessage="i-https://i.postimg.cc/R0QCk9vV/Rolling-0-9s-99px.gif"
+       height="250"
+       dataformat="json"       
 
        :datasource="aliveTime"
-     >
+     > </fusioncharts>
+     </div>
+
+     <div class="wrapper-left pt-4 pb-2 text-center">
      </fusioncharts>
      <fusioncharts
-       type="spline"
+       type="msline"
        width="100%"
-       height="100%"
-       dataformat="json"       dataEmptyMessage="i-https://i.postimg.cc/R0QCk9vV/Rolling-0-9s-99px.gif"
+       height="250"
+       dataformat="json"       
        :datasource="cfdata"
      >
      </fusioncharts>
+     </div>
    </div>
 
  </div>
@@ -32,92 +37,137 @@ export default {
 
      aliveTime: {
        chart: {
-         caption: "Alive Time for each Node",
-         captionFontBold: "0",
-         captionFontColor: "#000000",
-         captionPadding: "30",
+         caption: "Alive Time for each Node (Supersteps)",
+         theme: "umber",
+         captionFontBold: "1",
+         captionPadding: "10",
          baseFont: "Roboto",
-         chartTopMargin: "30",
+         chartTopMargin: "5",
          showHoverEffect: "1",
-         theme: "fusion",
          showaxislines: "1",
-         numberSuffix: "°C",
-         anchorBgColor: "#6297d9",
-         paletteColors: "#6297d9",
+         numberSuffix: "",
          drawCrossLine: "1",
-         plotToolText: "$label<br><hr><b>$dataValue</b>",
+         plotToolText: "Node: <b>$label</b><br> Alive Time: <b>$dataValue</b>",
          showAxisLines: "0",
-         showYAxisValues: "0",
+         showYAxisValues: "1",
+         yaxisname: "No. of Supersteps",
+         xaxisname: "Node",
          anchorRadius: "4",
          divLineAlpha: "0",
-         labelFontSize: "13",
+         labelFontSize: "10",
          labelAlpha: "65",
-         labelFontBold: "0",
-         rotateLabels: "1",
+         labelFontBold: "1",
+         rotateLabels: "0",
          slantLabels: "1",
-         canvasPadding: "20"
+         canvasPadding: "10",
        },
-       data: [],
+       data: '',
+       categories: '',
      },
 
      cfdata: {
        chart: {
          caption: "Cost Function of each Vertice",
-         captionFontBold: "0",
-         captionFontColor: "#000000",
-         captionPadding: "30",
-         baseFont: "Roboto",
-         chartTopMargin: "30",
-         showHoverEffect: "1",
          theme: "fusion",
+         captionFontBold: "1",
+         captionPadding: "20",
+         baseFont: "Roboto",
+         chartTopMargin: "15",
+         showHoverEffect: "1",
          showaxislines: "1",
-         numberSuffix: "°C",
-         anchorBgColor: "#6297d9",
-         paletteColors: "#6297d9",
+         numberSuffix: "",
          drawCrossLine: "1",
-         plotToolText: "$label<br><hr><b>$dataValue</b>",
+         plotToolText: "Node: <b>$label</b><br> Value: <b>$dataValue</b>",
          showAxisLines: "0",
-         showYAxisValues: "0",
+         showYAxisValues: "1",
+         yaxisname: "Cost Function",
+         xaxisname: "Node",
          anchorRadius: "4",
          divLineAlpha: "0",
          labelFontSize: "13",
          labelAlpha: "65",
-         labelFontBold: "0",
+         labelFontBold: "1",
          rotateLabels: "1",
          slantLabels: "1",
-         canvasPadding: "20"
+         canvasPadding: "20",
        },
-       data: [],
+       dataset: '',
+       categories: '',
      },
    };
  },
 
  methods: {
-   setcfdata: function() {
-   console.log(this.tempVar.nodeVertCostFn)
-     var data = [];
-     for (var key of Object.keys(this.tempVar.nodeVertCostFn)) {
-       var dataObject = {
-         label: key,
-         value: this.tempVar.nodeVertCostFn[key],
-       };
-       data.push(dataObject);
-     }
-     this.cfdata.data = data;
-     console.log(this.cfdata.data)
-   },
-   setalivedata: function() {
-   console.log(this.tempVar.totalAliveTime)
-     var data = [];
-     for (var i = 0; i < this.tempVar.tempToday.length; i++) {
-       var dataObject = {
-         label: this.tempVar.tempToday[i].hour,
-         value: this.tempVar.tempToday[i].temp
-       };
+  randomColor: function() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  },
 
+   setcfdata: function() {
+
+     var data = [];
+
+     var allSeriesData = new Object();
+     console.log(this.tempVar.nodeVertCostFn)
+
+     var lastThree = [];
+     for (var k of Object.keys(this.tempVar.nodeVertCostFn)) {
+        lastThree.push(k)
+     }
+     var last = lastThree.slice(lastThree.length-3, lastThree.length);
+     console.log(last)
+
+     for (var k of Object.keys(this.tempVar.nodeVertCostFn)) {
+      if (lastThree.indexOf(k) != -1) {
+        var allSeriesData = new Object()
+          allSeriesData['seriesname'] = k
+          allSeriesData['data'] = [];
+
+          for (var key of Object.keys(this.tempVar.nodeVertCostFn[k])) {
+            var dataObject = {
+              value: this.tempVar.nodeVertCostFn[k][key],
+            };
+            allSeriesData.data.push(dataObject);
+           }
+
+         data.push(allSeriesData)
+        }
+     }
+
+     this.cfdata.dataset = data;
+    console.log(this.cfdata.dataset)
+     var category = [];
+
+     var allSeriesData = new Object();
+     allSeriesData['category'] = [];
+     for (var k of Object.keys(this.tempVar.nodeVertCostFn[1])) {
+         var dataObject = {
+           label: k,
+        }
+        allSeriesData.category.push(dataObject);
+     }
+     category.push(allSeriesData)
+
+     this.cfdata.categories = category;
+
+     console.log(this.cfdata.categories)
+   },
+
+   setalivedata: function() {
+     var data = [];
+     for (var key of Object.keys(this.tempVar.totalAliveTime)) {
+       var dataObject = {
+         label: key.substr(key.length - 4),
+         value: this.tempVar.totalAliveTime[key],
+       };
        data.push(dataObject);
      }
-     this.cfdata.data = data;
+
+     this.aliveTime.data = data;
    },
  },
  mounted: function() {

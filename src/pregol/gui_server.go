@@ -41,7 +41,7 @@ type serverStats struct {
 	NumVertices		 int
 
 	// dynamic things
-	NodeVertCostFn	 map[int]float64	
+	NodeVertCostFn	 map[int]map[int]float64
 	CurrentIteration int
 	NumActiveNodes	 []int
 	ActiveNodesVert  map[string][]int
@@ -59,7 +59,7 @@ type serverData struct {
 	NumVertices		 int
 
 	// dynamic things
-	NodeVertCostFn	 map[int]float64	
+	NodeVertCostFn	 map[int]map[int]float64	
 	CurrentIteration int
 	NumActiveNodes	 []int
 	ActiveNodesVert  map[string][]int
@@ -93,9 +93,9 @@ func initGUI(originalFile string, nodeAdrs []string, graphName string) *serverSt
 		DoneSignal:			0,
 		GraphFile: 			originalFile,
 		NumPartitions:		graph.Info.NumPartitions,
-		NumVertices:		graph.Info.NumVertices,
+		NumVertices:		len(graph.Vertices),
 
-		NodeVertCostFn:		make(map[int]float64, 0),
+		NodeVertCostFn:		make(map[int]map[int]float64, 0),
 		CurrentIteration:	0,
 		NumActiveNodes:		make([]int,0),
 		ActiveNodesVert:	activeNodesVert,
@@ -144,15 +144,19 @@ func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *htt
 		graph := guistats.checkPath()
 		log.Printf("Read graph from %s: %v", guistats.GraphFile, guistats.CurrentIteration)
 
-		guistats.CurrentIteration = graph.Superstep
-
+		// guistats.CurrentIteration = graph.Superstep
+		guistats.CurrentIteration = guistats.CurrentIteration + graph.Superstep + 1
+		guistats.NodeVertCostFn[guistats.CurrentIteration] = make(map[int]float64)
 		// append the cost function for each node at each superstep to nodeVertCostFn
 
 		guistats.Mux.Lock()
 
-		for k,v := range graph.Vertices {
-			guistats.NodeVertCostFn[k] = v.Value
-		}
+		for k,_ := range graph.Vertices {
+			// only for testing
+			// guistats.NodeVertCostFn[k] = v.Value
+			r := 0 + rand.Float64() * (10 - 0)
+			guistats.NodeVertCostFn[guistats.CurrentIteration][k] = r
+		}	
 
 		for ip, _ := range guistats.ActiveNodesVert {
 			guistats.ActiveNodesVert[ip] = append(guistats.ActiveNodesVert[ip], 0)
@@ -178,6 +182,7 @@ func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *htt
 				r := rand.Intn(10)
 				randomMap[ip] = r
 			}
+			// remember to delete later
 			
 			// update total alive time
 			for ip, _ := range guistats.TotalAliveTime {

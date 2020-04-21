@@ -56,7 +56,7 @@
        </div>
 
        <dashboard-content
-         class="col-md-9 col-sm-8 col-xs-12 content"
+         class="col-md-9 col-sm-8 col-md-6 col-xs-12 content"
          id="dashboard-content"
          :highlights="highlights"
          :tempVar="tempVar">
@@ -164,10 +164,10 @@ export default {
          this.highlights.details.doneSignal = DoneSignal
          this.highlights.details.numActiveNodes = result.data['NumActiveNodes'].length
          this.highlights.avgTiming = result.data['AvgTiming']
+         this.highlights.avgTimingArr = this.highlights.avgTiming[this.highlights.avgTiming.length-1]
          this.tempVar.nodeVertCostFn = result.data['NodeVertCostFn']
          this.tempVar.totalAliveTime = result.data['TotalAliveTime']
-   
-         
+
        }).catch( error => {
            /*eslint-disable*/
            console.log(error);

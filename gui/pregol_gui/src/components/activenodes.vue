@@ -6,6 +6,7 @@
        :width="width"
        :height="height"
        :containerbackgroundopacity="containerbackgroundopacity"
+       dataEmptyMessage="i-https://i.postimg.cc/R0QCk9vV/Rolling-0-9s-99px.gif"
        :dataformat="dataformat"
        :datasource="datasource"
      ></fusioncharts>
