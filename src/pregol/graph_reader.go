@@ -27,7 +27,7 @@ type vertexReader struct {
 
 type edgeReader struct {
 	VerticeID int
-	Value     float64
+	Weight    float64
 }
 
 type graphReader struct {
@@ -49,7 +49,7 @@ func printGraphReader(gr graphReader) {
 
 	fmt.Println("------Vertex values-----")
 	for vID, vert := range gr.Vertices {
-		fmt.Println("Value of Vertex: ", vID, ": ", vert.Value)
+		fmt.Println("Initial Value of Vertex: ", vID, ": ", vert.Value)
 	}
 	fmt.Println("-------------")
 
@@ -63,7 +63,7 @@ func printGraphReader(gr graphReader) {
 	//}
 
 	//for vID, val := range(gr.Vertices){
-	//	fmt.Println("Value of Vertex ", vID, ": ", val.Value)
+	//	fmt.Println("Weight of Vertex ", vID, ": ", val.Weight)
 	//}
 }
 

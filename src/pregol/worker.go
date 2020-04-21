@@ -75,19 +75,23 @@ func (w *Worker) initState(gr graphReader) {
 			vReader.Flag, //false = active
 			vReader.Value,
 			make([]float64, 0),
-			make(chan []float64),
 			make(map[int]float64),
-			gr.Edges[vID]}
+			gr.Edges[vID],
+			float64(gr.Info.NumVertices)}
 
 		if _, ok := w.partToVert[partID]; !ok {
 			w.partToVert[partID] = make(map[int]*Vertex)
 		}
 		w.partToVert[partID][vID] = &v
+		for _, er := range v.OutEdges {
+			fmt.Println(er.Weight)
+		}
 		//w.activeVert = gr.ActiveVerts
 		//w.outQueue = gr.OutQueue
 	}
 
 	w.activeVert = gr.ActiveVerts
+
 	w.outQueue = gr.OutQueue
 	if len(w.outQueue) != 0 {
 		w.disseminateMsgFromOutQ()
@@ -153,10 +157,11 @@ func (w *Worker) disseminateMsgFromOutQ() {
 
 	// iterate over the worker's outqueue and prepare to disseminate it to the correct destination vertexID
 	//fmt.Println("OutQueue: ", w.outQueue)
+	w.outQLock.RLock()
 	for destVert, vals := range w.outQueue {
 
-		w.outQLock.RLock()
-		defer w.outQLock.RUnlock()
+		//w.outQLock.RLock()
+		//defer w.outQLock.RUnlock()
 
 		partID := getPartition(destVert, w.graphReader.Info.NumPartitions)
 		workerID := w.graphReader.PartitionToNode[partID]
@@ -168,6 +173,8 @@ func (w *Worker) disseminateMsgFromOutQ() {
 			nodeToOutQ[workerID][destVert] = append(nodeToOutQ[workerID][destVert], vals...)
 		}
 	}
+	w.outQLock.RUnlock()
+
 	fmt.Println("Finished building nodeToOutQ")
 
 	// set a waitgroup to wait for disseminating to all other workers (incl. yourself)
@@ -189,7 +196,7 @@ func (w *Worker) disseminateMsgFromOutQ() {
 					for i := range outQ[vID] {
 						w.inQueue[vID] = append(w.inQueue[vID], outQ[vID][i])
 					}
-					//fmt.Println("Populating own inQ.")
+					fmt.Println("Populating own inQ.")
 				}
 
 			}(nodeID, outQ)
@@ -303,7 +310,7 @@ func (w *Worker) workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) 
 		w.inQLock.Lock()
 		defer w.inQLock.Unlock()
 		for dst, vals := range dstToVals {
-			fmt.Println("Receving values from peer: ", vals)
+			fmt.Println("Receiving values from peer: ", vals)
 			w.inQueue[dst] = append(w.inQueue[dst], vals...)
 		}
 	}(bodyBytes)
@@ -322,7 +329,6 @@ func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 			vr.Value = v.Val
 			vr.Flag = v.flag
 			gr.Vertices[vID] = vr
-
 			gr.Edges[vID] = v.OutEdges
 		}
 	}
