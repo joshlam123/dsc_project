@@ -96,10 +96,10 @@ export default {
    setcfdata: function() {
    console.log(this.tempVar.nodeVertCostFn)
      var data = [];
-     for (var i = 0; i < this.tempVar.nodeVertCostFn; i++) {
+     for (var key of Object.keys(this.tempVar.nodeVertCostFn)) {
        var dataObject = {
-         label: i,
-         value: this.tempVar.nodeVertCostFn[i]
+         label: key,
+         value: this.tempVar.nodeVertCostFn[key],
        };
        data.push(dataObject);
      }
@@ -107,6 +107,7 @@ export default {
      console.log(this.cfdata.data)
    },
    setalivedata: function() {
+   console.log(this.tempVar.totalAliveTime)
      var data = [];
      for (var i = 0; i < this.tempVar.tempToday.length; i++) {
        var dataObject = {

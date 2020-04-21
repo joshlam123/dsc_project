@@ -16,8 +16,10 @@ func main() {
 	graphName := "rand20.json"
 	graph := fmt.Sprintf("../examples/data/unweighted/prob/%s", graphName)
 
-	guiport := args[3]
+	// guiport := args[2]
+
 	m := pregol.NewMaster(3, 1, "ip_add.txt", graph, port, primaryAddress)
-	go pregol.RunGUI(guiport, graph, "ip_add.txt", graphName)
+	
+	// go pregol.RunGUI(guiport, graph, "ip_add.txt", graphName)
 	m.Run()
 }
