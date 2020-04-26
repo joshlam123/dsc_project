@@ -1,0 +1,825 @@
+{
+ "CurrentIteration": 4,
+ "GraphsToNodes": [
+  {
+   "Info": {
+    "Name": "rand20",
+    "NumVertices": 20,
+    "NumPartitions": 3,
+    "NodeID": 0
+   },
+   "Vertices": {
+    "0": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "1": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "10": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "11": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "12": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "13": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "14": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "15": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "16": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "17": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "18": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "19": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "2": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "3": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "4": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "5": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "6": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "7": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "8": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "9": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    }
+   },
+   "Edges": {
+    "0": [
+     {
+      "VerticeID": 14,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 7,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 8,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 2,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 19,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     }
+    ],
+    "1": [
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 12,
+      "Weight": 0
+     }
+    ],
+    "10": [
+     {
+      "VerticeID": 15,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 2,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 19,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 0,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 6,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 14,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 4,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 7,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 13,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 1,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 12,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     }
+    ],
+    "11": [
+     {
+      "VerticeID": 7,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 6,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     }
+    ],
+    "12": [
+     {
+      "VerticeID": 11,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 14,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 7,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 1,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 0,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 4,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 8,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 2,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 19,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     }
+    ],
+    "13": [
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 7,
+      "Weight": 0
+     }
+    ],
+    "14": [
+     {
+      "VerticeID": 0,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 15,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     }
+    ],
+    "15": [
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 2,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 0,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     }
+    ],
+    "16": [
+     {
+      "VerticeID": 15,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 12,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 1,
+      "Weight": 0
+     }
+    ],
+    "17": [
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 2,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 0,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 1,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 4,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 8,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 15,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     }
+    ],
+    "18": [
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 12,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 15,
+      "Weight": 0
+     }
+    ],
+    "19": [
+     {
+      "VerticeID": 4,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 11,
+      "Weight": 0
+     }
+    ],
+    "2": [
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     }
+    ],
+    "3": [
+     {
+      "VerticeID": 2,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 11,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 1,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 15,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 14,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 13,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 7,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 4,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 19,
+      "Weight": 0
+     }
+    ],
+    "4": [
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 6,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 8,
+      "Weight": 0
+     }
+    ],
+    "5": [
+     {
+      "VerticeID": 1,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 19,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 8,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 6,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 0,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 11,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 7,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 2,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 4,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 13,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 14,
+      "Weight": 0
+     }
+    ],
+    "6": [
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 8,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 15,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 12,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 4,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 13,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 11,
+      "Weight": 0
+     }
+    ],
+    "7": [
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 12,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 13,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 6,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 11,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 1,
+      "Weight": 0
+     }
+    ],
+    "8": [
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     }
+    ],
+    "9": [
+     {
+      "VerticeID": 14,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 19,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 12,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 0,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 7,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 4,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 15,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 6,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 1,
+      "Weight": 0
+     }
+    ]
+   },
+   "PartitionToNode": {
+    "0": 0,
+    "1": 0,
+    "2": 0
+   },
+   "ActiveNodes": [
+    {
+     "IP": "localhost:3000",
+     "PartitionList": [
+      0,
+      1,
+      2
+     ]
+    }
+   ],
+   "OutQueue": {},
+   "Superstep": 4,
+   "ActiveVerts": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18
+   ],
+   "CurrentIteration": 0
+  }
+ ],
+ "NodeAdrs": {
+  "10.12.178.74:3000": false,
+  "10.12.211.121:3000": false,
+  "10.12.214.190:3000": false,
+  "10.12.34.191:3000": false,
+  "localhost:3000": true,
+  "localhost:3001": false,
+  "localhost:3002": false,
+  "localhost:4000": false,
+  "localhost:4001": false,
+  "localhost:4002": false,
+  "localhost:9000": false
+ }
+}

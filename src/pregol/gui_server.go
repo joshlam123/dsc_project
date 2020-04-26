@@ -31,7 +31,8 @@ import ("net/http"
 // 8. average timing across all supersteps (tbd)
 
 
-// needs to be changed
+const savePATH = "guiSave.json"
+
 type serverStats struct {
 	GraphName 		 string
 	DoneSignal		 int
@@ -41,14 +42,16 @@ type serverStats struct {
 	NumVertices		 int
 
 	// dynamic things
+	nodeAddresses 	 map[int]string
+	InactiveNodes 	 map[int]string
+	ActiveNodes 	 map[int]string
+	PartitionList	 map[int]map[string][]int
 	NodeVertCostFn	 map[int]map[int]float64
 	CurrentIteration int
-	NumActiveNodes	 []int
-	ActiveNodesVert  map[string][]int
+	ActiveNodesVert  map[int]map[int][]int
 	TotalAliveTime	 map[string]int
 	AvgTiming		 []float64
 	Mux 			 sync.RWMutex
-
 }
 
 type serverData struct {
@@ -59,13 +62,14 @@ type serverData struct {
 	NumVertices		 int
 
 	// dynamic things
-	NodeVertCostFn	 map[int]map[int]float64	
+	PartitionList	 map[string][]int
+	NodeVertCostFn	 map[int]map[int]float64
+	InactiveNodes 	 map[int]string
 	CurrentIteration int
-	NumActiveNodes	 []int
-	ActiveNodesVert  map[string][]int
+	NumActiveNodes	 int
+	ActiveNodesVert  map[int]map[int][]int
 	TotalAliveTime	 map[string]int
 	AvgTiming		 []float64
-
 }
 
 type httpReplyMsg struct {
@@ -75,31 +79,47 @@ type httpReplyMsg struct {
 	graphsToNodes    []graphReader
 }
 
+type guiSave struct {
+	CurrentIteration int
+	GraphsToNodes    []graphReader
+	NodeAdrs 		 map[string]bool
+}
+
+func getSaveFile(graphFile string) *guiSave {
+	jsonFile, err := os.Open(graphFile)
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer jsonFile.Close()
+
+	byteVal, _ := ioutil.ReadAll(jsonFile)
+	var g guiSave
+	json.Unmarshal(byteVal, &g)
+	return &g
+}
+
 func initGUI(originalFile string, nodeAdrs []string, graphName string) *serverStats {
 
 	// instantiate the GUI
 	graph := getGraphFromFile(originalFile)
 
-	timing := make(map[string]int, 0)
-	activeNodesVert := make(map[string][]int, 0)
-
-	for _, nodes := range nodeAdrs {
-		timing[strings.TrimSpace(nodes)] = 0
-		activeNodesVert[strings.TrimSpace(nodes)] = make([]int, 0)
-	}
-
 	guistats := &serverStats{
 		GraphName: 			graphName,
 		DoneSignal:			0,
 		GraphFile: 			originalFile,
-		NumPartitions:		graph.Info.NumPartitions,
+		NumPartitions:		0,
 		NumVertices:		len(graph.Vertices),
 
+		PartitionList: 		make(map[int]map[string][]int),
+		nodeAddresses: 		make(map[int]string),
 		NodeVertCostFn:		make(map[int]map[int]float64, 0),
-		CurrentIteration:	0,
-		NumActiveNodes:		make([]int,0),
-		ActiveNodesVert:	activeNodesVert,
-		TotalAliveTime:		timing,
+		CurrentIteration:	1,
+		ActiveNodes:		make(map[int]string, 0),
+		InactiveNodes: 		make(map[int]string, 0),
+		ActiveNodesVert:	make(map[int]map[int][]int),
+		TotalAliveTime:		make(map[string]int),
 		AvgTiming:			make([]float64,0),
 		Mux: 				sync.RWMutex{},
 
@@ -108,15 +128,42 @@ func initGUI(originalFile string, nodeAdrs []string, graphName string) *serverSt
 	return guistats
 }
 
-func (guistats *serverStats) checkPath() *graphReader {
-	var graph *graphReader
+func (guistats *serverStats) checkPath() *guiSave {
 
-	if _, err := os.Stat(checkpointPATH); os.IsNotExist(err) {
-		// the file does not exist. Read the very original graph
-		graph = getGraphFromFile(guistats.GraphFile)
-	} else {
+	var graph *guiSave
+
+	if _, err := os.Stat(savePATH); os.IsNotExist(err) {
+
 		// the file exists and read from checkpoint.json
-		graph = getGraphFromFile(checkpointPATH)
+		fmt.Println("Save file has not yet been created.")
+
+	} else {
+
+		// the file does not exist. Read the very original graph
+		graph = getSaveFile(savePATH)
+
+		guistats.NumPartitions = graph.GraphsToNodes[0].Info.NumPartitions
+
+		if graph.CurrentIteration == 0 {
+
+			for k,v := range graph.GraphsToNodes {
+				guistats.nodeAddresses[v.Info.NodeID] = v.ActiveNodes[k].IP
+				guistats.ActiveNodes[v.Info.NodeID] = v.ActiveNodes[k].IP
+				guistats.TotalAliveTime[v.ActiveNodes[k].IP] = 1
+			}
+
+		} 
+
+		log.Printf("Node Adr, %v", guistats.nodeAddresses)
+
+		guistats.PartitionList[graph.CurrentIteration] = make(map[string][]int)
+		for k, v := range graph.GraphsToNodes[0].PartitionToNode {
+			log.Printf("Partition List %s", guistats.nodeAddresses[v])
+			guistats.PartitionList[graph.CurrentIteration][guistats.nodeAddresses[v]] = append(guistats.PartitionList[graph.CurrentIteration][guistats.nodeAddresses[v]], k)
+		}
+
+		log.Printf("Read graph from %s: %v", savePATH, guistats.CurrentIteration)
+
 	}
 
 	return graph
@@ -139,106 +186,131 @@ func delay() int {
 	return randomAmt/1000
 }
 
+func getIndex(address map[int]string, searchString string) int {
+	var correctIndex int = -1
+	for k,v := range address {
+		if v == searchString {
+			correctIndex = k
+		}
+	}
+	return correctIndex
+}
+
 func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *http.Request) {
 
-		graph := guistats.checkPath()
-		log.Printf("Read graph from %s: %v", guistats.GraphFile, guistats.CurrentIteration)
+		graph := guistats.checkPath()	
 
-		// guistats.CurrentIteration = graph.Superstep
-		guistats.CurrentIteration = guistats.CurrentIteration + graph.Superstep + 1
-		guistats.NodeVertCostFn[guistats.CurrentIteration] = make(map[int]float64)
-		// append the cost function for each node at each superstep to nodeVertCostFn
+		if graph == nil  {
 
-		guistats.Mux.Lock()
+		    fmt.Println("is zero value")
 
-		for k,_ := range graph.Vertices {
-			// only for testing
-			// guistats.NodeVertCostFn[k] = v.Value
-			r := 0 + rand.Float64() * (10 - 0)
-			guistats.NodeVertCostFn[guistats.CurrentIteration][k] = r
-		}	
+		} else {
 
-		for ip, _ := range guistats.ActiveNodesVert {
-			guistats.ActiveNodesVert[ip] = append(guistats.ActiveNodesVert[ip], 0)
-		}
+			guistats.Mux.Lock()
 
-	    if len(graph.ActiveNodes) == 0 {
-
-			guistats.NumActiveNodes = append(guistats.NumActiveNodes, len(graph.ActiveNodes))
-
-			for _, activenode := range graph.ActiveNodes {
-				// get the total length of active currently active vertices for each partition
-				for ip, _ := range guistats.ActiveNodesVert {
-					if activenode.IP == ip {
-						guistats.ActiveNodesVert[ip] = append(guistats.ActiveNodesVert[ip], len(activenode.PartitionList))
-					}
-				}
-			}
-			
-			// only for testing purposes
-			randomMap := make(map[string]int)
-			for ip,_ := range guistats.TotalAliveTime {
-				// r := 0 + rand.Float64() * (10 - 0)
-				r := rand.Intn(10)
-				randomMap[ip] = r
-			}
-			// remember to delete later
-			
 			// update total alive time
-			for ip, _ := range guistats.TotalAliveTime {
-
-				// if the ip address of a node is contained in ActiveNodes, then change the timing
-				// if contains(graph.ActiveNodes, ip) == true {
-				// 	guistats.TotalAliveTime[ip] = float64(graph.Superstep)
-				// }
-				guistats.TotalAliveTime[ip] = randomMap[ip]
+			for k, v := range graph.GraphsToNodes {
+				if len(v.ActiveVerts) > 0 && guistats.CurrentIteration != graph.CurrentIteration {
+					guistats.TotalAliveTime[v.ActiveNodes[k].IP] += 1
+				}
 			} 
-
 
 			total := 0
 		    // append the average timing
 		    for _, timing := range guistats.TotalAliveTime {
 				total = total + timing
 	    	}
+
+	    	fmt.Println("Total TIMING ", total)
+
 	    	newtotal := float64(total)
 	    	avg := newtotal / float64(len(guistats.TotalAliveTime))
 	    	guistats.AvgTiming = append(guistats.AvgTiming, avg)
 
 			log.Printf("current Timing is: %v", guistats.AvgTiming)
-		
-			guistats.DoneSignal = 1
-	    } else {
-	    	guistats.DoneSignal = 1
-	    }
+
+			log.Printf("Total Alive Time: %v", guistats.TotalAliveTime)
+
+			guistats.CurrentIteration = graph.CurrentIteration
+			
+			guistats.ActiveNodesVert[graph.CurrentIteration] = make(map[int][]int)
+			guistats.NodeVertCostFn[graph.CurrentIteration] = make(map[int]float64)
+
+			// append the cost function for each node at each superstep to nodeVertCostFn
+			for k, v := range graph.GraphsToNodes[0].Vertices {
+				// only for testing
+				guistats.NodeVertCostFn[guistats.CurrentIteration][k] = v.Value
+				// r := 0 + rand.Float64() * (10 - 0)
+				// guistats.NodeVertCostFn[guistats.CurrentIteration][k] = r
+			}	
+
+			// change back to > 0 
+			var nOQ int = 0 
+			for _, v := range graph.GraphsToNodes {
+				if len(v.OutQueue) == 0 {
+					nOQ += 1
+				}
+			}
 
 
-	 //    guidata, err := json.Marshal(guistats)
-		
-		// if err != nil {
-		// 	fmt.Fprintf(w, "Error: %s", err)
-		// }
-
-		// // log.Printf("data: %v", guidata)
-
-		data := serverData{GraphName:guistats.GraphName, DoneSignal:guistats.DoneSignal, NumPartitions:guistats.NumPartitions,
-							NumVertices:guistats.NumVertices, NodeVertCostFn:guistats.NodeVertCostFn, CurrentIteration:guistats.CurrentIteration,
-							NumActiveNodes:guistats.NumActiveNodes, ActiveNodesVert:guistats.ActiveNodesVert, TotalAliveTime:guistats.TotalAliveTime,
-							AvgTiming:guistats.AvgTiming}
+		    if len(guistats.nodeAddresses) == nOQ {
 
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-	    // w.WriteHeader(http.StatusOK)
-	    // fmt.Fprintf(w, "%v", guidata)
-	    json.NewEncoder(w).Encode(data)
+		    	for k,v := range graph.NodeAdrs {
+		    		if v == true {
+		    			index := getIndex(guistats.nodeAddresses, k)
+		    			if index != -1 {
+		    				guistats.ActiveNodes[index] = k
+		    				if _, ok := guistats.InactiveNodes[index]; ok {
+		    					delete(guistats.InactiveNodes, index)
+		    				}
+		    			} 
+		    		} else {
+		    			index := getIndex(guistats.nodeAddresses, k)
+		    			if index != -1 {
+		    				delete(guistats.ActiveNodes, index)
+		    				guistats.InactiveNodes[index] = k
+		    			}  
 
-	    guistats.Mux.Unlock()
+		    		}
+		    	}
 
-	    log.Printf("Wrote data")
-	    // if err := json.NewEncoder(w).Encode(guistats); err != nil {
-	    //     panic(err)
-	    // } 
 
+				for _, activenode := range graph.GraphsToNodes {
+					// get the total length of active currently active vertices for each partition
+
+					for _, v := range activenode.ActiveVerts {
+						guistats.ActiveNodesVert[graph.CurrentIteration][activenode.Info.NodeID] = append(guistats.ActiveNodesVert[graph.CurrentIteration][activenode.Info.NodeID], v)
+					}
+
+				}
+
+			
+		    } else {
+
+		    	guistats.DoneSignal = 1
+
+		    }
+
+			data := serverData{GraphName:guistats.GraphName, DoneSignal:guistats.DoneSignal, NumPartitions:guistats.NumPartitions,
+								NumVertices:guistats.NumVertices, NodeVertCostFn:guistats.NodeVertCostFn, PartitionList: guistats.PartitionList[graph.CurrentIteration], 
+								CurrentIteration:guistats.CurrentIteration, NumActiveNodes:len(guistats.ActiveNodes), 
+								ActiveNodesVert:guistats.ActiveNodesVert, TotalAliveTime:guistats.TotalAliveTime, InactiveNodes: guistats.InactiveNodes,
+								AvgTiming:guistats.AvgTiming}
+
+
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		    
+		    json.NewEncoder(w).Encode(data)
+
+		    guistats.Mux.Unlock()
+
+		    log.Printf("Wrote data")
+
+		}
+
+	
 	delay()
  	// req, _ := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer([]byte msg)
 }
@@ -246,6 +318,7 @@ func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *htt
 
 func (guistats *serverStats) runServer(server string) {
 	http.HandleFunc("/guiserver", guistats.sendGraphStats)
+	// PROBABLY NEED TO LISTEN IN ON some port somewhere..
 	http.ListenAndServe(fmt.Sprint(":",server), nil)
 	log.Printf("GUI Server running from port %s", server)
 }

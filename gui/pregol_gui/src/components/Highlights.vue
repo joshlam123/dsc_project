@@ -4,7 +4,6 @@
     <div class="content-header h4 text-center pt-2 pb-3">Highlights</div>
       <div class="row">
         <active-nodes :highlights="highlights"></active-nodes>
-        <!--visibility :highlights="highlights"></visibility-->
         <sum-index :highlights="highlights"></sum-index>
       </div>
     </div>
@@ -13,14 +12,12 @@
 
 <script>
 import ActiveNodes from "./activenodes.vue";
-import Visibility from "./Visibility.vue";
 import Details from "./Summary.vue";
 
 export default {
   props: ["highlights"],
   components: {
     "active-nodes": ActiveNodes,
-    "visibility": Visibility,
     "sum-index": Details,
   },
 };

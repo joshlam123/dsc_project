@@ -22,7 +22,7 @@
             <div class="wrapper-left pt-4 pb-2 text-center">
             <span>Size of Graph:</span>
                <div id="graph-size"> 
-               <b>{{ numVertices }}</b>
+               <b>{{ highlights.numVertices }}</b>
                </div>
             </div>
 
@@ -43,9 +43,17 @@
             </div>
 
             <div class="wrapper-left pt-4 pb-2 text-center">
+            <span>Partition Breakdown:</span>
+
+             <div id="partition_break">
+               <p><b> {{ partitionList }} </b></p>
+             </div>
+            </div>
+
+            <div class="wrapper-left pt-4 pb-2 text-center">
            <span>Current Superstep:</span>
              <div id="currentiteration">
-               <b> {{ currentIteration }} </b>
+               <b> {{ highlights.currentIteration }} </b>
              </div>
             </div>
 
@@ -70,6 +78,7 @@
 <script>
 import Content from './components/Content.vue'
 import axios from 'axios';
+import ActiveNodes from "./components/activenodes.vue";
 
 export default {
   name: 'app',
@@ -83,14 +92,11 @@ export default {
     list: [],
 
     graphName:      this.graphName,
-    graphFile:      this.graphFile,
     numPartitions:  this.numPartitions,
     numVertices:    this.numVertices,
-
+    partitionList:  this.partitionList,
     currentIteration: this.currentIteration,
     numActiveNodes:  this.numActiveNodes,
-    activeNodesVert: this.activeNodesVert,
-
      
     tempVar: {
       nodeVertCostFn: this.nodeVertCostFn,
@@ -107,7 +113,7 @@ export default {
         avgTiming: this.avgTiming, 
         avgTimingArr: this.avgTiming,
        },
-       
+      inactiveNodes: this.inactiveNodes,
 
        uvIndex: '',
        visibility: '',
@@ -116,7 +122,8 @@ export default {
          windDirection: '',
          derivedWindDirection: ''
         },
-      }
+      },
+    timer: '',
     };
   },
   computed () {
@@ -124,6 +131,7 @@ export default {
   },
 
   created () {
+        this.timer = setInterval(this.fetchEventsList, 1000)
         this.fetchData();
     },
 
@@ -136,7 +144,7 @@ export default {
     
     var data = {};
     const options = { method: 'GET', 
-    url: 'http://127.0.0.1:3000/guiserver', headers: {'Accept': 'application/json', 'Content-Type': 'application/json;charset=UTF-8'}}
+    url: 'http://127.0.0.1:9000/guiserver', headers: {'Accept': 'application/json', 'Content-Type': 'application/json;charset=UTF-8'}}
     console.log("Fetching data")
 
     axios(options).then(result => { 
@@ -148,10 +156,8 @@ export default {
 
          // this.response = result.data;
          this.graphName = result.data['GraphName']
-         this.graphFile = result.data['GraphFile']
+         this.partitionList = result.data['PartitionList']
          this.numPartitions = result.data['NumPartitions']
-         this.numVertices = result.data['NumVertices']
-         this.currentIteration = result.data['CurrentIteration']
          this.avgTiming = result.data['AvgTiming']
         
 
@@ -162,9 +168,19 @@ export default {
           }
 
          this.highlights.details.doneSignal = DoneSignal
-         this.highlights.details.numActiveNodes = result.data['NumActiveNodes'].length
+         this.highlights.details.numActiveNodes = result.data['NumActiveNodes']
+         this.highlights.numVertices = result.data['NumVertices']
          this.highlights.avgTiming = result.data['AvgTiming']
+         this.highlights.currentIteration = result.data['CurrentIteration']
          this.highlights.avgTimingArr = this.highlights.avgTiming[this.highlights.avgTiming.length-1]
+         this.highlights.activeNodesVert = result.data['ActiveNodesVert']
+
+         if (result.data['InactiveNodes'].length > 0) { 
+           this.highlights.inactiveNodes = result.data['InactiveNodes']
+         } else {
+          this.highlights.inactiveNodes = 0
+         }
+         
          this.tempVar.nodeVertCostFn = result.data['NodeVertCostFn']
          this.tempVar.totalAliveTime = result.data['TotalAliveTime']
 
@@ -173,10 +189,9 @@ export default {
            console.log(error);
            /*eslint-enable*/
      });},
+  cancelAutoUpdate () { clearInterval(this.timer) },
 
   
-
-
 
   detectEnterKeyPress() {
        var input = this.$refs.input;
@@ -191,7 +206,9 @@ export default {
 
 
   },
-
+  beforeDestroy () {
+      clearInterval(this.timer)
+  }
   
 
 }
@@ -224,5 +241,11 @@ li {
 
 a {
   color: #42b983;
+}
+
+b pre {
+  white-space: pre-wrap; 
+  word-wrap: break-word;
+  font-family: inherit;
 }
 </style>

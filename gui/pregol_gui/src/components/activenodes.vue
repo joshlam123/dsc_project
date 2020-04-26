@@ -27,14 +27,14 @@ export default {
      dataformat: "json",
      datasource: {
        chart: {
-         caption: "Progress of Pregel",
+         caption: "Number of Active Vertices",
          captionFontBold: "0",
          captionFontColor: "#000000",
          captionPadding: "30",
          lowerLimit: "0",
-         upperLimit: "20",
-         lowerLimitDisplay: "1",
-         upperLimitDisplay: "20",
+         upperLimit: "",
+         lowerLimitDisplay: "0",
+         upperLimitDisplay: "",
          showValue: "0",
          theme: "fusion",
          baseFont: "Roboto",
@@ -51,18 +51,18 @@ export default {
          autoAlignTickValues: "1",
          majorTMAlpha: "20",
          chartTopMargin: "30",
-         chartBottomMargin: "40"
+         chartBottomMargin: "60"
        },
        colorrange: {
          color: [
            {
              minvalue: "0",
-             maxvalue: this.highlights.uvIndex.toString(),
+             maxvalue: 0,
              code: "#7DA9E0"
            },
            {
-             minvalue: this.highlights.uvIndex.toString(),
-             maxvalue: "10",
+             minvalue: 0,
+             maxvalue: "",
              code: "#D8EDFF"
            }
          ]
@@ -74,11 +74,11 @@ export default {
                {
                  id: "val-label",
                  type: "text",
-                 text: this.highlights.uvIndex.toString(),
+                 text: "",
                  fontSize: "20",
-                 font: "Source Sans Pro",
+                 font: "Roboto",
                  fontBold: "1",
-                 fillcolor: "#212529",
+                 fillcolor: "#000000",
                  x: "$gaugeCenterX",
                  y: "$gaugeCenterY"
                }
@@ -89,28 +89,52 @@ export default {
        dials: {
          dial: [
            {
-             value: this.highlights.uvIndex.toString(),
-             baseWidth: "0",
-             radius: "0",
-             borderThickness: "0",
-             baseRadius: "0"
+             value: "",
+             baseWidth: "10",
+             radius: "100",
+             borderThickness: "1",
+             baseRadius: "1",
            }
          ]
        }
      }
    };
  },
- methods: {},
- computed: {},
- watch: {
+ methods: {
+     setdialProperty: function() {
+          
+          console.log(Object.values(this.highlights.activeNodesVert));
+          var numActiveVerts = 1;
+
+          for (var key in this.highlights.activeNodesVert) {
+            for (var k in this.highlights.activeNodesVert[key]){
+              for (var m in this.highlights.activeNodesVert[key][k]) {
+                numActiveVerts += this.highlights.activeNodesVert[key][k].length
+              }
+            }
+          }
+
+          this.datasource.chart.upperLimit = this.highlights.numVertices;
+          this.datasource.chart.upperLimitDisplay = this.highlights.numVertices;
+          this.datasource.annotations.groups[0].items[0].text = numActiveVerts;
+          this.datasource.dials.dial[0].value = numActiveVerts;
+          this.datasource.colorrange.color[0].maxvalue = numActiveVerts;
+          this.datasource.colorrange.color[1].minvalue = "0";
+          console.log(numActiveVerts);
+     },
+  
+  },
+  mounted: function() {
+    this.setdialProperty();
+  },
+  watch: {
    highlights: {
      handler: function() {
-       this.datasource.colorrange.color[0].maxvalue = this.highlights.uvIndex.toString();
-       this.datasource.colorrange.color[1].minvalue = this.highlights.uvIndex.toString();
-       this.datasource.annotations.groups[0].items[0].text = this.highlights.uvIndex.toString();
+       this.setdialProperty();                             
      },
      deep: true
-   }
- }
+   },
+  },
+ 
 };
 </script>

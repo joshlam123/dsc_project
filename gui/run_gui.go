@@ -8,9 +8,11 @@ func main() {
 
 	// graphName := "rand20.json"
 	// graph := fmt.Sprintf("../examples/data/unweighted/prob/%s", graphName)
+	// guiport := args[2]
 
-	graphName := "checkpoint.json"
-	graph := fmt.Sprintf("../run_master/%s", graphName)
+	graphName := "rand20.json"
+	graph := fmt.Sprintf("../examples/data/weighted/prob/%s", graphName)
 
-	pregol.RunGUI("3000", graph, "../run_master/ip_add.txt", graphName)
+	pregol.RunGUI("9000", graph, "../run_master/ip_add.txt", graphName)
+	// go pregol.RunGUI(guiport, graph, "ip_add.txt", graphName)
 }	
