@@ -38,13 +38,12 @@ export default {
      aliveTime: {
        chart: {
          caption: "Alive Time for each Node (Supersteps)",
-         theme: "umber",
          captionFontBold: "1",
          captionPadding: "10",
          baseFont: "Roboto",
          chartTopMargin: "5",
          showHoverEffect: "1",
-         showaxislines: "1",
+         showaxislines: "0",
          numberSuffix: "",
          drawCrossLine: "1",
          plotToolText: "Node: <b>$label</b><br> Alive Time: <b>$dataValue</b>",
@@ -53,13 +52,14 @@ export default {
          yaxisname: "No. of Supersteps",
          xaxisname: "Node",
          anchorRadius: "4",
-         divLineAlpha: "0",
+         divLineAlpha: "1",
          labelFontSize: "10",
-         labelAlpha: "65",
+         labelAlpha: "30",
          labelFontBold: "1",
          rotateLabels: "0",
          slantLabels: "1",
          canvasPadding: "10",
+         theme: "fusion",
        },
        data: '',
        categories: '',
@@ -67,7 +67,7 @@ export default {
 
      cfdata: {
        chart: {
-         caption: "Cost Function of each Vertice",
+         caption: "Value of each Vertice",
          theme: "fusion",
          captionFontBold: "1",
          captionPadding: "20",
@@ -80,7 +80,8 @@ export default {
          plotToolText: "Node: <b>$label</b><br> Value: <b>$dataValue</b>",
          showAxisLines: "0",
          showYAxisValues: "1",
-         yaxisname: "Cost Function",
+         yaxisname: "Value",
+         legendcaption: "Superstep Number",
          xaxisname: "Node",
          anchorRadius: "4",
          divLineAlpha: "0",
@@ -112,6 +113,7 @@ export default {
      var data = [];
 
      var allSeriesData = new Object();
+
      console.log(this.tempVar.nodeVertCostFn)
 
      var lastThree = [];
@@ -119,9 +121,9 @@ export default {
         lastThree.push(k)
      }
      var last = lastThree.slice(lastThree.length-3, lastThree.length);
-     console.log(last)
 
-     for (var k of Object.keys(this.tempVar.nodeVertCostFn)) {
+     for (var k of Object.keys(this.tempVar.nodeVertCostFn)) {       
+
       if (lastThree.indexOf(k) != -1) {
         var allSeriesData = new Object()
           allSeriesData['seriesname'] = k
@@ -132,29 +134,31 @@ export default {
               value: this.tempVar.nodeVertCostFn[k][key],
             };
             allSeriesData.data.push(dataObject);
-           }
-
-         data.push(allSeriesData)
-        }
+          }
+        data.push(allSeriesData)
+      }
      }
-
+     
      this.cfdata.dataset = data;
     console.log(this.cfdata.dataset)
-     var category = [];
 
-     var allSeriesData = new Object();
-     allSeriesData['category'] = [];
-     for (var k of Object.keys(this.tempVar.nodeVertCostFn[1])) {
-         var dataObject = {
+    var category = [];
+
+    var catData = new Object();
+    catData['category'] = [];
+
+    var lastItem = last[last.length-1]
+    for (var k of Object.keys(this.tempVar.nodeVertCostFn[lastItem])) {
+        var catDataObject = {
            label: k,
-        }
-        allSeriesData.category.push(dataObject);
-     }
-     category.push(allSeriesData)
+        };
+        catData.category.push(catDataObject);
 
+    };
+      category.push(catData);
      this.cfdata.categories = category;
 
-     console.log(this.cfdata.categories)
+    console.log(this.cfdata.categories)
    },
 
    setalivedata: function() {

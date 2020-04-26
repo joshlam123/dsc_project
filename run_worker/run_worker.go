@@ -1,7 +1,7 @@
 package main
 
 import (
-	"dsc_project/src/pregol"
+	"pregol"
 	"fmt"
 	"math"
 	"os"
@@ -95,6 +95,6 @@ func MakeShortestPath(sourceID int) pregol.UDF {
 
 func main() {
 	ports := os.Args[1:]
-	//pregol.RunUDF(MaxValue, ports)
-	pregol.RunUDF(MakeShortestPath(0), ports)
+	pregol.RunUDF(MaxValue, ports)
+	// pregol.RunUDF(MakeShortestPath(0), ports)
 }

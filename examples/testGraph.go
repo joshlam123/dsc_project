@@ -38,9 +38,15 @@ type graphReader struct {
 	ActiveNodes     []activeNode
 }
 
+type guiSave struct {
+	CurrentIteration int
+	GraphsToNodes    []graphReader
+}
+
 func printGraphReader(gr graphReader) {
-	fmt.Println("Graph ID: ", gr.Info.NodeID)
+	fmt.Println("Graph ID: ", gr.Info)
 	fmt.Println("# Vertices:", gr.Info.NumVertices)
+	fmt.Println("ActiveNodes: ", gr.ActiveNodes)
 	fmt.Println("Graph contains vertices ---")
 	for vID, vert := range gr.Vertices {
 		fmt.Println("Vertice", vID, ": ", vert.Value)
@@ -54,7 +60,7 @@ func newGraphReader() graphReader {
 	return gR
 }
 
-func getGraphFromFile(graphFile string) *graphReader {
+func getGraphFromFile(graphFile string) *guiSave {
 	jsonFile, err := os.Open(graphFile)
 
 	if err != nil {
@@ -64,13 +70,15 @@ func getGraphFromFile(graphFile string) *graphReader {
 	defer jsonFile.Close()
 
 	byteVal, _ := ioutil.ReadAll(jsonFile)
-	var g graphReader
+	var g guiSave
 	json.Unmarshal(byteVal, &g)
 	return &g
 }
 
 
 func main() {
-	gr := getGraphFromFile("data/unweighted/prob/rand20.json")
-	printGraphReader(*gr)
+	// file := 'data/weighted/prob/rand20.json'
+	gr := getGraphFromFile("../gui/guiSave.json")
+	fmt.Println("GR ", gr.GraphsToNodes)
+	// printGraphReader(*gr)
 }

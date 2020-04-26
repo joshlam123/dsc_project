@@ -17,6 +17,34 @@ FusionTheme(FusionCharts);
 // Globally register the components for project-wide use
 Vue.use(VueFusionCharts, FusionCharts);
 
+Vue.component('events', {
+    template: '#events-template',
+
+    data () {
+        return {
+            list: [],
+            timer: ''
+        }
+    },
+    created () {
+        this.fetchEventsList();
+        this.timer = setInterval(this.fetchEventsList, 300000)
+    },
+    methods: {
+        fetchEventsList () {
+            this.$http.get('events', (events) => {
+                this.list = events;
+            }).bind(this);
+        },
+        cancelAutoUpdate () { clearInterval(this.timer) }
+
+    },
+    beforeDestroy () {
+      clearInterval(this.timer)
+    }
+});
+
+
 // Instantiate the Vue instance that controls the application
 new Vue({
  el: '#app',

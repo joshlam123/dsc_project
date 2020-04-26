@@ -39,12 +39,6 @@ type Master struct {
 	primaryAddress   string
 }
 
-type guiSend struct {
-	numPartitions    int
-	currentIteration int
-	activeNodes      []activeNode
-}
-
 // NewMaster Constructor for Master struct
 func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string, port string, primaryAddress string) *Master {
 	m := Master{}
@@ -66,10 +60,6 @@ func NewMaster(numPartitions, checkpoint int, ipFile, graphFile string, port str
 	for _, ip := range strings.Split(string(dat), "\n") {
 		m.nodeAdrs[strings.TrimSpace(ip)] = false
 	}
-
-	// master accepts a port argument to run the gui server
-	// port := os.Args[1]
-	// go RunGUI(port)
 
 	return &m
 }
@@ -118,6 +108,14 @@ func (m *Master) InitConnections() {
 	}
 }
 
+func (m *Master) savePartStatus(){
+	currentCheckpoint := m.currentIteration - (m.currentIteration % m.checkpoint)
+	data := guiSave{CurrentIteration:currentCheckpoint, GraphsToNodes:m.graphsToNodes, NodeAdrs:m.nodeAdrs}
+	file, _ := json.MarshalIndent(data, "", " ")
+	ioutil.WriteFile("../gui/guiSave.json", file, 0644)
+	fmt.Println("Gui Save written to file.")
+}
+
 // AssignPartitions Assign partToVert to active nodes
 func (m *Master) AssignPartitions(graphFile string) {
 	gOriginal := getGraphFromFile(m.graphFile)                // Original file
@@ -164,6 +162,7 @@ func (m *Master) AssignPartitions(graphFile string) {
 		cNode := partitionIdx % len(m.activeNodes)
 		m.graphsToNodes[cNode].ActiveVerts = append(m.graphsToNodes[cNode].ActiveVerts, aV)
 	}
+	go m.savePartStatus()
 }
 
 // DisseminateGraph ...
@@ -396,9 +395,9 @@ func (m *Master) done() {
 	}
 	wg.Wait()
 
-	if _, err := os.Stat(checkpointPATH); err == nil {
-		os.Remove(checkpointPATH)
-	}
+	// if _, err := os.Stat(checkpointPATH); err == nil {
+	// 	os.Remove(checkpointPATH)
+	// }
 }
 
 func (m *Master) pingMaster(rw http.ResponseWriter, r *http.Request) {
