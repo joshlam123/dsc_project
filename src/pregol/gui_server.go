@@ -10,28 +10,9 @@ import ("net/http"
 		"math/rand"
 		"sync"
 		"os")
-		// "time")
 
 
-// the types of data needed by the master to disseminate into the graph are:
-
-// static things
-// 4. Number of Partitions 
-// 6. total size of the graph
-
-
-// dynamic things
-// 1. line graph of the cost function for each vertice over time (with the time step)
-// 2. histogram of the number of active nodes being processed (in each worker) 
-// 3. Number of supersteps progressed so far
-// 4. # of active nodes per partition being processed
-// 9. Total Alive Time for Each Node (how many supersteps participated in)
-
-// 7. timing for each superstep (tbd)
-// 8. average timing across all supersteps (tbd)
-
-
-const savePATH = "guiSave.json"
+const savePATH = "../results/guiSave.json"
 
 type serverStats struct {
 	GraphName 		 string
@@ -223,6 +204,7 @@ func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *htt
 
 	    	fmt.Println("Total TIMING ", total)
 
+	    	// function to calculate the average timing
 	    	newtotal := float64(total)
 	    	avg := newtotal / float64(len(guistats.TotalAliveTime))
 	    	guistats.AvgTiming = append(guistats.AvgTiming, avg)
@@ -231,20 +213,19 @@ func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *htt
 
 			log.Printf("Total Alive Time: %v", guistats.TotalAliveTime)
 
+			// set the current iteration to the current superstep
 			guistats.CurrentIteration = graph.CurrentIteration
-			
+				
+			// initialise activenodesvert and nodevertcostfn for this superstep
 			guistats.ActiveNodesVert[graph.CurrentIteration] = make(map[int][]int)
 			guistats.NodeVertCostFn[graph.CurrentIteration] = make(map[int]float64)
 
 			// append the cost function for each node at each superstep to nodeVertCostFn
 			for k, v := range graph.GraphsToNodes[0].Vertices {
-				// only for testing
 				guistats.NodeVertCostFn[guistats.CurrentIteration][k] = v.Value
-				// r := 0 + rand.Float64() * (10 - 0)
-				// guistats.NodeVertCostFn[guistats.CurrentIteration][k] = r
 			}	
 
-			// change back to > 0 
+			// number of nodes in the outqueue
 			var nOQ int = 0 
 			for _, v := range graph.GraphsToNodes {
 				if len(v.OutQueue) == 0 {
@@ -252,10 +233,9 @@ func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *htt
 				}
 			}
 
-
 		    if len(guistats.nodeAddresses) == nOQ {
 
-
+		    	// remove the no longer active nodes from active nodes
 		    	for k,v := range graph.NodeAdrs {
 		    		if v == true {
 		    			index := getIndex(guistats.nodeAddresses, k)
@@ -276,8 +256,8 @@ func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *htt
 		    	}
 
 
+		    	// get the total length of active currently active vertices for each partition
 				for _, activenode := range graph.GraphsToNodes {
-					// get the total length of active currently active vertices for each partition
 
 					for _, v := range activenode.ActiveVerts {
 						guistats.ActiveNodesVert[graph.CurrentIteration][activenode.Info.NodeID] = append(guistats.ActiveNodesVert[graph.CurrentIteration][activenode.Info.NodeID], v)
@@ -288,10 +268,12 @@ func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *htt
 			
 		    } else {
 
+		    	// pregel is done
 		    	guistats.DoneSignal = 1
 
 		    }
 
+		    // package the data to be sent to the GUI in the serverdata struct
 			data := serverData{GraphName:guistats.GraphName, DoneSignal:guistats.DoneSignal, NumPartitions:guistats.NumPartitions,
 								NumVertices:guistats.NumVertices, NodeVertCostFn:guistats.NodeVertCostFn, PartitionList: guistats.PartitionList[graph.CurrentIteration], 
 								CurrentIteration:guistats.CurrentIteration, NumActiveNodes:len(guistats.ActiveNodes), 
@@ -310,19 +292,18 @@ func (guistats *serverStats) sendGraphStats (w http.ResponseWriter, request *htt
 
 		}
 
-	
 	delay()
- 	// req, _ := http.NewRequest("POST", getURL(ip, "3000", "guiserver"), bytes.NewBuffer([]byte msg)
 }
 
 
+// handler for running the server
 func (guistats *serverStats) runServer(server string) {
 	http.HandleFunc("/guiserver", guistats.sendGraphStats)
-	// PROBABLY NEED TO LISTEN IN ON some port somewhere..
 	http.ListenAndServe(fmt.Sprint(":",server), nil)
 	log.Printf("GUI Server running from port %s", server)
 }
 
+// initialiser that will be called from runGUI inside the gui folder
 func RunGUI(server string, originalFile string, ip string, graphName string) {
 
 	ipaddrs := make([]string,0)

@@ -112,7 +112,7 @@ func (m *Master) savePartStatus(){
 	currentCheckpoint := m.currentIteration - (m.currentIteration % m.checkpoint)
 	data := guiSave{CurrentIteration:currentCheckpoint, GraphsToNodes:m.graphsToNodes, NodeAdrs:m.nodeAdrs}
 	file, _ := json.MarshalIndent(data, "", " ")
-	ioutil.WriteFile("../gui/guiSave.json", file, 0644)
+	ioutil.WriteFile("../gui/results/guiSave.json", file, 0644)
 	fmt.Println("Gui Save written to file.")
 }
 
