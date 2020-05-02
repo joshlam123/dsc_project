@@ -342,6 +342,7 @@ func (m *Master) saveState() bool {
 			saveGraph.OutQueue[id] = append(saveGraph.OutQueue[id], outQ...)
 		}
 	}
+	saveGraph.CurrentIteration = m.currentIteration
 	saveFile := getJSONByteFromGraph(saveGraph)
 	ioutil.WriteFile(checkpointPATH, saveFile, 0644)
 
@@ -405,7 +406,7 @@ func (m *Master) pingMaster(rw http.ResponseWriter, r *http.Request) {
 	bodyBytes, _ := ioutil.ReadAll(r.Body)
 	currentCheckpoint := m.currentIteration - (m.currentIteration % m.checkpoint)
 
-	// Send CP file if not up to date
+	// // Send CP file if not up to date
 	if string(bodyBytes) != string(currentCheckpoint) && m.currentIteration > m.checkpoint {
 		gr := getGraphFromFile(checkpointPATH)
 		gr.CurrentIteration = currentCheckpoint
@@ -420,6 +421,7 @@ func (m *Master) Run() {
 			time.Sleep(time.Second * 10)
 			// Ping primary
 			var sendStr = []byte(string(m.currentIteration))
+			fmt.Println(getURL(m.primaryAddress, "pingMaster"))
 			req, _ := http.NewRequest("GET", getURL(m.primaryAddress, "pingMaster"), bytes.NewBuffer(sendStr))
 			pingResp, err := m.client.Do(req)
 			if err != nil {
@@ -432,8 +434,8 @@ func (m *Master) Run() {
 			// Check for CP file
 			defer pingResp.Body.Close()
 			bodyBytes, _ := ioutil.ReadAll(pingResp.Body)
-			if string(bodyBytes) != "" {
-				bodyBytes, _ := ioutil.ReadAll(pingResp.Body)
+			if strings.TrimSpace(string(bodyBytes)) != "" {
+				fmt.Println("Received checkpoint file, saving.")
 				// Save CP file
 				gr := getGraphFromJSONByte(bodyBytes)
 				m.currentIteration = gr.CurrentIteration
@@ -446,13 +448,17 @@ func (m *Master) Run() {
 	}
 
 	// Start replica-response server
-	go func() {
-		http.HandleFunc("/pingMaster", m.pingMaster)
+	go func(m *Master) {
+		http.HandleFunc(getPortPath("/pingMaster", m.port), m.pingMaster)
 		http.ListenAndServe(fmt.Sprint(":", m.port), nil)
-	}()
+	}(m)
 
 	currentState := SUPERSTEP
-	m.rollback(m.graphFile)
+	if m.currentIteration != 0 {
+		m.rollback(checkpointPATH)
+	} else {
+		m.rollback(m.graphFile)
+	}
 
 	for {
 		switch currentState {
