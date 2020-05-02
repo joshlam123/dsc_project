@@ -10,14 +10,14 @@ func PageRank(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 	halt := false
 	if superstep != 0 {
 		var sum float64 = 0
-		for _, msg := range vertex.InEdges {
+		for _, msg := range vertex.InMsg {
 			sum += msg
 		}
-		vertex.Val = 0.15/NumVertices() + 0.85*sum
+		vertex.Val = 0.15/vertex.NumVertices + 0.85*sum
 	}
 
 	if superstep < 30 {
-		n := len(vertex.InEdges)
+		n := len(vertex.InMsg)
 		contrib := vertex.Val / float64(n)
 		for _, edge := range vertex.OutEdges {
 			msgs[edge.VerticeID] = contrib

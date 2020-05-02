@@ -86,8 +86,6 @@ func (w *Worker) initState(gr graphReader) {
 		for _, er := range v.OutEdges {
 			fmt.Println(er.Weight)
 		}
-		//w.activeVert = gr.ActiveVerts
-		//w.outQueue = gr.OutQueue
 	}
 
 	w.activeVert = gr.ActiveVerts
@@ -107,7 +105,6 @@ func (w *Worker) startSuperstep() {
 	defer w.pingPong.Release(1)
 
 	// sending values to vertices through InMsg Channel
-	//fmt.Println("inqueue: ", w.inQueue)
 	for vID, val := range w.inQueue {
 		partID := getPartition(vID, w.graphReader.Info.NumPartitions)
 		fmt.Println("new val: ", val)
@@ -118,14 +115,12 @@ func (w *Worker) startSuperstep() {
 	}
 
 	// clearing queues so new values are not appended to old values (refresh for fresh superStep)
-	// same for activeVert
 	w.outQueue = make(map[int][]float64)
 	w.activeVert = make([]int, 0)
 
 	var wg sync.WaitGroup
 	for _, vList := range w.partToVert {
 
-		//if w.ID == w.graphReader.PartitionToNode[pid] {
 		wg.Add(1)                        // add waitGroup for each partition: vertex list
 		go func(vList map[int]*Vertex) { // for each partition, launch go routine to call compute for each of its vertex
 			defer wg.Done()
@@ -156,12 +151,8 @@ func (w *Worker) disseminateMsgFromOutQ() {
 	nodeToOutQ := make(map[int]map[int][]float64)
 
 	// iterate over the worker's outqueue and prepare to disseminate it to the correct destination vertexID
-	//fmt.Println("OutQueue: ", w.outQueue)
 	w.outQLock.RLock()
 	for destVert, vals := range w.outQueue {
-
-		//w.outQLock.RLock()
-		//defer w.outQLock.RUnlock()
 
 		partID := getPartition(destVert, w.graphReader.Info.NumPartitions)
 		workerID := w.graphReader.PartitionToNode[partID]
@@ -280,6 +271,7 @@ func (w *Worker) disseminateGraphHandler(rw http.ResponseWriter, r *http.Request
 }
 
 func (w *Worker) startSuperstepHandler(rw http.ResponseWriter, r *http.Request) {
+	// Receiving Master's instruction to start superstep
 	if err := w.pingPong.Acquire(w.ctx, 1); err != nil {
 		log.Printf("Failed to acquire semaphore: %v to start Superstep", err)
 	} else {
@@ -290,10 +282,10 @@ func (w *Worker) startSuperstepHandler(rw http.ResponseWriter, r *http.Request) 
 }
 
 func (w *Worker) workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) {
+	// Receiving messages send from other worker nodes
 	defer r.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		// do something
 	}
 	go func(bodyBytes []byte) {
 		w.busyWorker.Acquire(w.ctx, 1)
@@ -317,10 +309,8 @@ func (w *Worker) workerToWorkerHandler(rw http.ResponseWriter, r *http.Request) 
 }
 
 func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
+	// Receiving Master's instruction to save current state
 	gr := newGraphReader()
-
-	fmt.Println("Worker in saveStateHandler.")
-
 	gr.OutQueue = w.outQueue
 
 	for _, vert := range w.partToVert {
@@ -348,7 +338,7 @@ func (w *Worker) saveStateHandler(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (w *Worker) pingHandler(rw http.ResponseWriter, r *http.Request) {
-	// read the ping request
+	// Read the ping request
 	bodyByte, _ := ioutil.ReadAll(r.Body)
 	bodyString := string(bodyByte)
 	fmt.Println("received ping: ", bodyString)

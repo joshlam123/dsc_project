@@ -62,4 +62,16 @@ The examples folder is designed to help the user do two things:
 # GUI
 The GUI folder is a standalone folder which holds the results from each run of Pregel and also the source code for the GUI. It has a separate README which contains information on how to run the GUI. 
 
+# To Run 
+To run the program with n worker nodes and 2 masters (1 primary and 1 secondary), you will need to open n + 2 terminals concurrently. 
+
+For each worker:
+1. Ensure working directory is in ```dsc_project/run_worker``
+2. ```go run run_worker.go [port#]``` - port# for each worker has to be unique. 
+
+For Primary master
+1. Ensure working directory is in ```dsc_project/run_master```
+2. ```go run run_master.go [port#] [port# of primary]```
+
+The program is set to run the Max Value example on a 20 node graph. You can change these parameters at ```run_master.go```
 

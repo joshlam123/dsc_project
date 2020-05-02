@@ -13,7 +13,7 @@ func MaxValue(vertex *pregol.Vertex, superstep int) (bool, map[int]float64) {
 	// algorithm:
 	// 1. take max(value, incomingValues...)
 	newMax := false
-	for _, val := range vertex.InEdges {
+	for _, val := range vertex.InMsg {
 		if val > vertex.Val {
 			vertex.Val = val
 			newMax = true

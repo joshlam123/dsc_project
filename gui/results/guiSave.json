@@ -1,5 +1,5 @@
 {
- "CurrentIteration": 4,
+ "CurrentIteration": 0,
  "GraphsToNodes": [
   {
    "Info": {
@@ -10,74 +10,104 @@
    },
    "Vertices": {
     "0": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "0",
+     "Value": 4,
+     "Flag": false
+    },
+    "1": {
+     "Name": "1",
+     "Value": 3,
+     "Flag": false
     },
     "10": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "10",
+     "Value": 12,
+     "Flag": false
     },
     "11": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "11",
+     "Value": 5,
+     "Flag": false
     },
     "12": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "12",
+     "Value": 12,
+     "Flag": false
     },
     "13": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "13",
+     "Value": 0,
+     "Flag": false
     },
     "14": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "14",
+     "Value": 0,
+     "Flag": false
+    },
+    "15": {
+     "Name": "15",
+     "Value": 4,
+     "Flag": false
     },
     "16": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "16",
+     "Value": 13,
+     "Flag": false
     },
     "17": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "17",
+     "Value": 11,
+     "Flag": false
     },
     "18": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "18",
+     "Value": 13,
+     "Flag": false
+    },
+    "19": {
+     "Name": "19",
+     "Value": 13,
+     "Flag": false
+    },
+    "2": {
+     "Name": "2",
+     "Value": 0,
+     "Flag": false
     },
     "3": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "3",
+     "Value": 1,
+     "Flag": false
+    },
+    "4": {
+     "Name": "4",
+     "Value": 1,
+     "Flag": false
     },
     "5": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "5",
+     "Value": 0,
+     "Flag": false
     },
     "6": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "6",
+     "Value": 2,
+     "Flag": false
     },
     "7": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
+     "Name": "7",
+     "Value": 3,
+     "Flag": false
+    },
+    "8": {
+     "Name": "8",
+     "Value": 6,
+     "Flag": false
     },
     "9": {
-     "Name": "",
+     "Name": "9",
      "Value": 17,
-     "Flag": true
+     "Flag": false
     }
    },
    "Edges": {
@@ -116,6 +146,16 @@
      },
      {
       "VerticeID": 16,
+      "Weight": 0
+     }
+    ],
+    "1": [
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 12,
       "Weight": 0
      }
     ],
@@ -305,6 +345,32 @@
       "Weight": 0
      }
     ],
+    "15": [
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 2,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 0,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     }
+    ],
     "16": [
      {
       "VerticeID": 15,
@@ -387,6 +453,26 @@
       "Weight": 0
      }
     ],
+    "19": [
+     {
+      "VerticeID": 4,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 11,
+      "Weight": 0
+     }
+    ],
+    "2": [
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     }
+    ],
     "3": [
      {
       "VerticeID": 2,
@@ -438,6 +524,40 @@
      },
      {
       "VerticeID": 19,
+      "Weight": 0
+     }
+    ],
+    "4": [
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 6,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 8,
       "Weight": 0
      }
     ],
@@ -587,6 +707,16 @@
       "Weight": 0
      }
     ],
+    "8": [
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     }
+    ],
     "9": [
      {
       "VerticeID": 14,
@@ -640,214 +770,22 @@
    },
    "PartitionToNode": {
     "0": 0,
-    "1": 1,
+    "1": 0,
     "2": 0
    },
    "ActiveNodes": [
     {
-     "IP": "localhost:3001",
-     "PartitionList": [
-      0,
-      2
-     ]
-    },
-    {
      "IP": "localhost:3000",
      "PartitionList": [
-      1
+      0,
+      1,
+      2
      ]
     }
    ],
    "OutQueue": {},
-   "Superstep": 4,
-   "ActiveVerts": [
-    0,
-    3,
-    5,
-    6,
-    7,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    16,
-    17,
-    18
-   ],
-   "CurrentIteration": 0
-  },
-  {
-   "Info": {
-    "Name": "rand20",
-    "NumVertices": 20,
-    "NumPartitions": 3,
-    "NodeID": 1
-   },
-   "Vertices": {
-    "1": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    },
-    "15": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    },
-    "19": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    },
-    "2": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    },
-    "4": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    },
-    "8": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    }
-   },
-   "Edges": {
-    "1": [
-     {
-      "VerticeID": 16,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 12,
-      "Weight": 0
-     }
-    ],
-    "15": [
-     {
-      "VerticeID": 17,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 2,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 18,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 0,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 3,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 10,
-      "Weight": 0
-     }
-    ],
-    "19": [
-     {
-      "VerticeID": 4,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 9,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 11,
-      "Weight": 0
-     }
-    ],
-    "2": [
-     {
-      "VerticeID": 5,
-      "Weight": 0
-     }
-    ],
-    "4": [
-     {
-      "VerticeID": 10,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 18,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 6,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 5,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 17,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 3,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 9,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 8,
-      "Weight": 0
-     }
-    ],
-    "8": [
-     {
-      "VerticeID": 5,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 17,
-      "Weight": 0
-     }
-    ]
-   },
-   "PartitionToNode": {
-    "0": 0,
-    "1": 1,
-    "2": 0
-   },
-   "ActiveNodes": [
-    {
-     "IP": "localhost:3001",
-     "PartitionList": [
-      0,
-      2
-     ]
-    },
-    {
-     "IP": "localhost:3000",
-     "PartitionList": [
-      1
-     ]
-    }
-   ],
-   "OutQueue": {},
-   "Superstep": 4,
-   "ActiveVerts": [
-    1,
-    2,
-    4,
-    8,
-    15
-   ],
+   "Superstep": 0,
+   "ActiveVerts": null,
    "CurrentIteration": 0
   }
  ],
@@ -857,8 +795,9 @@
   "10.12.214.190:3000": false,
   "10.12.34.191:3000": false,
   "localhost:3000": true,
-  "localhost:3001": true,
+  "localhost:3001": false,
   "localhost:3002": false,
+  "localhost:3003": false,
   "localhost:4000": false,
   "localhost:4001": false,
   "localhost:4002": false,

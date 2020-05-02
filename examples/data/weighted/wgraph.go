@@ -1,55 +1,54 @@
-
 package main
 
 import (
-		"fmt"
-		"math/rand"
-		"strconv"
-		"os"
-		"time"
-		"encoding/json"
-		)
+	"encoding/json"
+	"fmt"
+	"math/rand"
+	"os"
+	"strconv"
+	"time"
+)
 
 // vertex of a graph which has id, value, outgoingEdges
 type Node struct {
-	Name 		string
-	Value       int
+	Name  string
+	Value int
 }
 
-type Vertice struct{
+type Vertice struct {
 	VerticeId int
-	Value 	  int
-	Weight 	  float64
+	Value     int
+	Weight    float64
 }
 
 type Info struct {
-	Name string
+	Name        string
 	NumVertices int
 }
 
 func check(e error) {
-    if e != nil {
-        panic(e)
-    }
+	if e != nil {
+		panic(e)
+	}
 }
 
 func stringInSlice(a int, list []int) bool {
-    for _, b := range list {
-        if b == a {
-            return false
-        }
-    }
-    return true
+	for _, b := range list {
+		if b == a {
+			return false
+		}
+	}
+	return true
 }
 
-func writeToJson(jsonFile interface{}, name string, size int){
+func writeToJson(jsonFile interface{}, name string, size int) {
 	jsonString, err := json.Marshal(jsonFile)
-    fmt.Println(err)
+	fmt.Println(err)
 
-	file, err := os.Create("./"+name+strconv.Itoa(size)+".json")
+	file, err := os.Create("./" + name + strconv.Itoa(size) + ".json")
 
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 	defer file.Close()
 	file.Write(jsonString)
@@ -59,10 +58,10 @@ func writeToJson(jsonFile interface{}, name string, size int){
 
 var aggregatorName string
 
-// main takes in two command line arguements: a fileName and an aggregatorName. The file must be stored in a textfile 
+// main takes in two command line arguements: a fileName and an aggregatorName. The file must be stored in a textfile
 // in the examples directory as this script will read the file name from there. aggregatorName will be passed to the master
 func main() {
-	// make sure graph is strongly connected 
+	// make sure graph is strongly connected
 
 	var maxValSoFar int = 0
 	var minValSoFar int = 0
@@ -72,40 +71,39 @@ func main() {
 	maxNoNodes, _ := strconv.Atoi(os.Args[2])
 
 	nodeVals := make(map[int]Node)
-    // vertices 
-    for node := 0; node < maxNoNodes; node++ {
-    	// generate the nodevalues first
-    	rand.Seed(time.Now().UnixNano())
+	// vertices
+	for node := 0; node < maxNoNodes; node++ {
+		// generate the nodevalues first
+		rand.Seed(time.Now().UnixNano())
 
-    	// turn this on only if the algorithm can handle negative nodes
-    	// nodeVal = rand.Intn(maxNoNodes - (-maxNoNodes)) + (-maxNoNodes)
-    	nodeVal := rand.Intn(maxNoNodes)
+		// turn this on only if the algorithm can handle negative nodes
+		// nodeVal = rand.Intn(maxNoNodes - (-maxNoNodes)) + (-maxNoNodes)
+		nodeVal := rand.Intn(maxNoNodes)
 
-    	if nodeVal > maxValSoFar {
-    		maxValSoFar = nodeVal
-    	} else if nodeVal < minValSoFar {
-    		minValSoFar = nodeVal
-    	}
+		if nodeVal > maxValSoFar {
+			maxValSoFar = nodeVal
+		} else if nodeVal < minValSoFar {
+			minValSoFar = nodeVal
+		}
 
-    	nodeVals[node] = Node{Name:strconv.Itoa(node), Value:nodeVal}
-    	}
+		nodeVals[node] = Node{Name: strconv.Itoa(node), Value: nodeVal}
+	}
 
+	totalEdgeMap := make(map[int][]Vertice)
+	// distinctPoints := make(map[string])
+	for node := 0; node < maxNoNodes; node++ {
+		// edges
 
-    totalEdgeMap := make(map[int][]Vertice)
-    // distinctPoints := make(map[string])
-    for node := 0; node < maxNoNodes; node++ {
-    	// edges
-
-	// for each node, generate a random number of values and take the value from nodeVals
+		// for each node, generate a random number of values and take the value from nodeVals
 		numNodes := rand.Intn(maxNoNodes)
 		for numNodes == 0 {
 			numNodes = rand.Intn(maxNoNodes)
 		}
 		fmt.Println("Number of nodes %d", numNodes)
 
-	// for each of the nodes 
-	traversedEdges := []int{}
-	traversedEdges = append(traversedEdges, node)
+		// for each of the nodes
+		traversedEdges := []int{}
+		traversedEdges = append(traversedEdges, node)
 
 		for node2 := 0; node2 < numNodes; node2++ {
 
@@ -120,27 +118,25 @@ func main() {
 
 			var weight float64 = rand.Float64() * float64(maxNoNodes)
 
-			totalEdgeMap[node] = append(totalEdgeMap[node], Vertice{VerticeId:rndNode, Value:nodeVals[rndNode].Value, Weight:weight})
+			totalEdgeMap[node] = append(totalEdgeMap[node], Vertice{VerticeId: rndNode, Value: nodeVals[rndNode].Value, Weight: weight})
 
 			traversedEdges = append(traversedEdges, rndNode)
 		}
- 	}
- 	
-    infoInt := Info{Name:aggregatorName, NumVertices:maxNoNodes}
- 	// infoMap := map[string]interface{}{"info":interface{}{"name":aggregatorName, "numVertices":numNodes}}
+	}
 
- 	generatedJson := map[string]interface{}{"info": infoInt, "vertices":nodeVals, "edges":totalEdgeMap}
+	infoInt := Info{Name: aggregatorName, NumVertices: maxNoNodes}
+	// infoMap := map[string]interface{}{"info":interface{}{"name":aggregatorName, "numVertices":numNodes}}
 
+	generatedJson := map[string]interface{}{"info": infoInt, "vertices": nodeVals, "edges": totalEdgeMap}
 
- 	d2 := map[string]int{"max_value":maxValSoFar, "min_value":minValSoFar}
+	d2 := map[string]int{"max_value": maxValSoFar, "min_value": minValSoFar}
 
-    fmt.Println(generatedJson)
-    fmt.Println("Max Value", maxValSoFar)
-    fmt.Println("min Value", minValSoFar)
+	fmt.Println(generatedJson)
+	fmt.Println("Max Weight", maxValSoFar)
+	fmt.Println("min Weight", minValSoFar)
 
-    writeToJson(generatedJson, os.Args[1], maxNoNodes)
+	writeToJson(generatedJson, os.Args[1], maxNoNodes)
 
-    writeToJson(d2, "solutions"+os.Args[1], maxNoNodes)
-
+	writeToJson(d2, "solutions"+os.Args[1], maxNoNodes)
 
 }

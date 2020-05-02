@@ -19,7 +19,7 @@ func MakeShortestPath(sourceID int) pregol.UDF {
 			}
 		}
 		newMin := false
-		for _, msg := range vertex.InEdges {
+		for _, msg := range vertex.InMsg {
 			if msg < vertex.Val {
 				vertex.Val = msg
 				newMin = true
@@ -27,7 +27,7 @@ func MakeShortestPath(sourceID int) pregol.UDF {
 		}
 		if newMin {
 			for _, edge := range vertex.OutEdges {
-				msgs[edge.VerticeID] = vertex.Val + edge.Value
+				msgs[edge.VerticeID] = vertex.Val + edge.Weight
 			}
 		}
 		return true, msgs
