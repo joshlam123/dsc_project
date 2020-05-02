@@ -14,11 +14,6 @@
      "Value": 17,
      "Flag": true
     },
-    "1": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    },
     "10": {
      "Name": "",
      "Value": 17,
@@ -44,11 +39,6 @@
      "Value": 17,
      "Flag": true
     },
-    "15": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    },
     "16": {
      "Name": "",
      "Value": 17,
@@ -64,22 +54,7 @@
      "Value": 17,
      "Flag": true
     },
-    "19": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    },
-    "2": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    },
     "3": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    },
-    "4": {
      "Name": "",
      "Value": 17,
      "Flag": true
@@ -95,11 +70,6 @@
      "Flag": true
     },
     "7": {
-     "Name": "",
-     "Value": 17,
-     "Flag": true
-    },
-    "8": {
      "Name": "",
      "Value": 17,
      "Flag": true
@@ -146,16 +116,6 @@
      },
      {
       "VerticeID": 16,
-      "Weight": 0
-     }
-    ],
-    "1": [
-     {
-      "VerticeID": 16,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 12,
       "Weight": 0
      }
     ],
@@ -345,32 +305,6 @@
       "Weight": 0
      }
     ],
-    "15": [
-     {
-      "VerticeID": 17,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 2,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 18,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 0,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 3,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 10,
-      "Weight": 0
-     }
-    ],
     "16": [
      {
       "VerticeID": 15,
@@ -453,26 +387,6 @@
       "Weight": 0
      }
     ],
-    "19": [
-     {
-      "VerticeID": 4,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 9,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 11,
-      "Weight": 0
-     }
-    ],
-    "2": [
-     {
-      "VerticeID": 5,
-      "Weight": 0
-     }
-    ],
     "3": [
      {
       "VerticeID": 2,
@@ -524,40 +438,6 @@
      },
      {
       "VerticeID": 19,
-      "Weight": 0
-     }
-    ],
-    "4": [
-     {
-      "VerticeID": 10,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 18,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 6,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 5,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 17,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 3,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 9,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 8,
       "Weight": 0
      }
     ],
@@ -707,16 +587,6 @@
       "Weight": 0
      }
     ],
-    "8": [
-     {
-      "VerticeID": 5,
-      "Weight": 0
-     },
-     {
-      "VerticeID": 17,
-      "Weight": 0
-     }
-    ],
     "9": [
      {
       "VerticeID": 14,
@@ -770,16 +640,21 @@
    },
    "PartitionToNode": {
     "0": 0,
-    "1": 0,
+    "1": 1,
     "2": 0
    },
    "ActiveNodes": [
     {
-     "IP": "localhost:3000",
+     "IP": "localhost:3001",
      "PartitionList": [
       0,
-      1,
       2
+     ]
+    },
+    {
+     "IP": "localhost:3000",
+     "PartitionList": [
+      1
      ]
     }
    ],
@@ -787,24 +662,191 @@
    "Superstep": 4,
    "ActiveVerts": [
     0,
-    1,
-    2,
     3,
-    4,
     5,
     6,
     7,
-    8,
     9,
     10,
     11,
     12,
     13,
     14,
-    15,
     16,
     17,
     18
+   ],
+   "CurrentIteration": 0
+  },
+  {
+   "Info": {
+    "Name": "rand20",
+    "NumVertices": 20,
+    "NumPartitions": 3,
+    "NodeID": 1
+   },
+   "Vertices": {
+    "1": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "15": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "19": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "2": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "4": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    },
+    "8": {
+     "Name": "",
+     "Value": 17,
+     "Flag": true
+    }
+   },
+   "Edges": {
+    "1": [
+     {
+      "VerticeID": 16,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 12,
+      "Weight": 0
+     }
+    ],
+    "15": [
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 2,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 0,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     }
+    ],
+    "19": [
+     {
+      "VerticeID": 4,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 11,
+      "Weight": 0
+     }
+    ],
+    "2": [
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     }
+    ],
+    "4": [
+     {
+      "VerticeID": 10,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 18,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 6,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 3,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 9,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 8,
+      "Weight": 0
+     }
+    ],
+    "8": [
+     {
+      "VerticeID": 5,
+      "Weight": 0
+     },
+     {
+      "VerticeID": 17,
+      "Weight": 0
+     }
+    ]
+   },
+   "PartitionToNode": {
+    "0": 0,
+    "1": 1,
+    "2": 0
+   },
+   "ActiveNodes": [
+    {
+     "IP": "localhost:3001",
+     "PartitionList": [
+      0,
+      2
+     ]
+    },
+    {
+     "IP": "localhost:3000",
+     "PartitionList": [
+      1
+     ]
+    }
+   ],
+   "OutQueue": {},
+   "Superstep": 4,
+   "ActiveVerts": [
+    1,
+    2,
+    4,
+    8,
+    15
    ],
    "CurrentIteration": 0
   }
@@ -815,7 +857,7 @@
   "10.12.214.190:3000": false,
   "10.12.34.191:3000": false,
   "localhost:3000": true,
-  "localhost:3001": false,
+  "localhost:3001": true,
   "localhost:3002": false,
   "localhost:4000": false,
   "localhost:4001": false,
