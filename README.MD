@@ -34,7 +34,7 @@ The GUI folder is a standalone folder which holds the results from each run of P
 To run the program with n worker nodes and 2 masters (1 primary and 1 secondary), you will need to open n + 2 terminals concurrently. 
 
 For each worker:
-1. Ensure working directory is in ```dsc_project/run_worker``
+1. Ensure working directory is in ```dsc_project/run_worker```
 2. ```go run run_worker.go <port#>``` - port# for each worker has to be unique. 
 
 For Primary master
