@@ -25,18 +25,18 @@ const (
 	SAVESTATE
 )
 
-// Master ...
+// Master handles all computations for the Master Node
 type Master struct {
 	numPartitions    int             // Number of partitions
 	checkpoint       int             // Number of supersteps before reaching a checkpoint
-	nodeAdrs         map[string]bool //
-	activeNodes      []activeNode
+	nodeAdrs         map[string]bool // Store all nodes addresses
+	activeNodes      []activeNode    // Information on all currently active nodes
 	graphsToNodes    []graphReader
-	graphFile        string //
+	graphFile        string // Filepath to initial graph input
 	client           *http.Client
-	currentIteration int
-	port             string
-	primaryAddress   string
+	currentIteration int    // Current superstep number
+	port             string // Port number of this master node
+	primaryAddress   string // Address of master primary replica
 }
 
 // NewMaster Constructor for Master struct
@@ -108,9 +108,9 @@ func (m *Master) InitConnections() {
 	}
 }
 
-func (m *Master) savePartStatus(){
+func (m *Master) savePartStatus() {
 	currentCheckpoint := m.currentIteration - (m.currentIteration % m.checkpoint)
-	data := guiSave{CurrentIteration:currentCheckpoint, GraphsToNodes:m.graphsToNodes, NodeAdrs:m.nodeAdrs}
+	data := guiSave{CurrentIteration: currentCheckpoint, GraphsToNodes: m.graphsToNodes, NodeAdrs: m.nodeAdrs}
 	file, _ := json.MarshalIndent(data, "", " ")
 	ioutil.WriteFile("../gui/results/guiSave.json", file, 0644)
 	fmt.Println("Gui Save written to file.")
@@ -165,7 +165,7 @@ func (m *Master) AssignPartitions(graphFile string) {
 	go m.savePartStatus()
 }
 
-// DisseminateGraph ...
+// DisseminateGraph Helper function to disseminate graph to workers
 func (m *Master) DisseminateGraph() {
 	var wg sync.WaitGroup
 
@@ -216,8 +216,6 @@ func (m *Master) rollback(graphFile string) {
 	m.AssignPartitions(graphFile)
 	m.DisseminateGraph()
 }
-
-// ------------- State machine stuffs ---------------------
 
 func (m *Master) superstep() (bool, bool) {
 	fmt.Println("Starting Superstep", m.currentIteration)
@@ -395,9 +393,9 @@ func (m *Master) done() {
 	}
 	wg.Wait()
 
-	// if _, err := os.Stat(checkpointPATH); err == nil {
-	// 	os.Remove(checkpointPATH)
-	// }
+	if _, err := os.Stat(checkpointPATH); err == nil {
+		os.Remove(checkpointPATH)
+	}
 }
 
 func (m *Master) pingMaster(rw http.ResponseWriter, r *http.Request) {
@@ -415,6 +413,7 @@ func (m *Master) pingMaster(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Run is the main function to run for master
 func (m *Master) Run() {
 	if len(m.primaryAddress) != 0 {
 		for {
