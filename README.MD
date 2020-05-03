@@ -2,46 +2,14 @@
 This is the main README file for the project by Team Pregel for the 50.041 Distribued Systems and Computing project. There are separate readme files in the different directories to explain. 
 
 The general structure of the entire project is as follows: 
-.
-├── LICENSE
-├── README.MD
-├── examples
-│   ├── data
-│   │   ├── unweighted
-│   │   └── weighted
-│   ├── max_value
-│   │   └── max_value.go
-│   ├── pagerank
-│   │   └── pagerank.go
-│   ├── shortest_path
-│   │   └── shortest_path.go
-│   └── testGraph.go
-├── gui
-│   ├── GUI\ README.MD
-│   ├── pregol_gui
-│   │   ├── README.md
-│   │   ├── index.html
-│   │   ├── node_modules
-│   │   ├── package-lock.json
-│   │   ├── package.json
-│   │   ├── src
-│   │   └── webpack.config.js
-│   ├── results
-│   │   └── guiSave.json
-│   └── run_gui.go
-├── run_master
-│   ├── checkpoint.json
-│   ├── ip_add.txt
-│   └── run_master.go
-├── run_worker
-│   └── run_worker.go
-└── src
-    └── pregol
-        ├── graph_reader.go
-        ├── gui_server.go
-        ├── master.go
-        ├── vertex.go
-        └── worker.go
+.<br>
+├── LICENSE <br>
+├── README.MD <br>
+├── examples <br>
+├── gui <br>
+├── run_master <br>
+├── run_worker <br>
+└── src <br>
 
 
 # Source Code
